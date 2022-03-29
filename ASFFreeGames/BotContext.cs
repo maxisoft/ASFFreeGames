@@ -8,9 +8,11 @@ using BloomFilter;
 namespace Maxisoft.ASF;
 
 internal sealed class BotContext {
+	private const ulong BlackListCount = 5;
 	private readonly Filter<string> CompletedApp = new(1 << 12);
-	private readonly HashSet<string> InMemoryCompletedApp = new HashSet<string>();
+	private readonly Dictionary<string, (ulong counter, DateTime date)> InMemoryCompletedApp = new(StringComparer.InvariantCultureIgnoreCase);
 	private readonly WeakReference<Bot> Bot;
+	private readonly TimeSpan InMemoryTimeOut = TimeSpan.FromDays(1);
 	public BotContext(Bot bot) => Bot = new WeakReference<Bot>(bot);
 
 	private string CompletedAppFilePath() {
@@ -31,12 +33,17 @@ internal sealed class BotContext {
 
 	public void SaveApp(string query) {
 		CompletedApp.Add(query);
-		InMemoryCompletedApp.Add(query);
+		InMemoryCompletedApp[query] = (long.MaxValue, DateTime.MaxValue - InMemoryTimeOut);
 	}
 
 	public bool HasApp(string query) {
-		if (InMemoryCompletedApp.Contains(query)) {
-			return true;
+		if (InMemoryCompletedApp.TryGetValue(query, out var tuple) && (tuple.counter >= BlackListCount)) {
+			if (DateTime.UtcNow - tuple.date > InMemoryTimeOut) {
+				InMemoryCompletedApp.Remove(query);
+			}
+			else {
+				return true;
+			}
 		}
 
 		if (!CompletedApp.Contains(query)) {
@@ -53,13 +60,38 @@ internal sealed class BotContext {
 #pragma warning restore CA2201
 		}
 
-		(uint appid, string type) = GetAppInfo(query);
+		(uint appid, _) = GetAppInfo(query);
 
 		if (appid == 0) {
 			return false;
 		}
 
 		return bot.OwnedPackageIDs.ContainsKey(appid);
+	}
+
+	public ulong AppTickCount(string query, bool increment = false) {
+		ulong res = 0;
+		DateTime? dateTime = null;
+
+		if (InMemoryCompletedApp.TryGetValue(query, out var tuple)) {
+			if (DateTime.UtcNow - tuple.date > InMemoryTimeOut) {
+				InMemoryCompletedApp.Remove(query);
+			}
+			else {
+				res = tuple.counter;
+				dateTime = tuple.date;
+			}
+		}
+
+		if (increment) {
+			checked {
+				res += 1;
+			}
+
+			InMemoryCompletedApp[query] = (res, dateTime ?? DateTime.UtcNow);
+		}
+
+		return res;
 	}
 
 	private static (uint appid, string type) GetAppInfo(string query) {

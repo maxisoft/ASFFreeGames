@@ -108,8 +108,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 				string message = string.Join(",", games.Where(static g => !g.FreeToPlay).Select(static g => g.Identifier).Where(id => !context.HasApp(id)));
 				ArchiLogger.LogGenericDebug($"collecting games on {bot.BotName} {message}", nameof(CollectGames));
 
-				foreach ((string? identifier, bool freeToPlay, _) in games) {
+				foreach ((string? identifier, bool freeToPlay, long time) in games) {
 					if (freeToPlay) {
+						continue;
+					}
+
+					if (context.HasApp(identifier)) {
 						continue;
 					}
 
@@ -128,6 +132,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 						}
 
 						save = true;
+					}
+					else if (Math.Abs(Utilities.GetUnixTime() - time) > TimeSpan.FromHours(24).TotalMilliseconds) {
+						context.AppTickCount(identifier, increment: true);
 					}
 				}
 
