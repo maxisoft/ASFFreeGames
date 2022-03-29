@@ -7,6 +7,8 @@
 		<PackageReference Include="ConfigureAwaitChecker.Analyzer" PrivateAssets="all" />
 		<PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
 		<PackageReference Include="System.Composition.AttributedModel" IncludeAssets="compile" />
+		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="SteamKit2" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
@@ -15,5 +17,11 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj" ExcludeAssets="all" Private="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\BloomFilter\BloomFilter.cs">
+	    <Link>BloomFilter.cs</Link>
+	  </Compile>
 	</ItemGroup>
 </Project>

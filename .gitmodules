@@ -2,3 +2,6 @@
 	path = ArchiSteamFarm
 	url = https://github.com/JustArchiNET/ArchiSteamFarm.git
 	branch = 5.2.3.7
+[submodule "BloomFilter"]
+	path = BloomFilter
+	url = https://gist.github.com/8c74d66798a21e05a35b0023573f48e9.git
