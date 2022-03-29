@@ -15,7 +15,6 @@ public record struct RedditGameEntry(string Identifier, bool FreeToPlay, long da
 internal sealed class RedditHelper {
 	private const string User = "ASFinfo";
 
-	[NotNull]
 	private static Uri GetUrl() => new Uri($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
 	private readonly Lazy<Regex> CommandRegex = new Lazy<Regex>(
