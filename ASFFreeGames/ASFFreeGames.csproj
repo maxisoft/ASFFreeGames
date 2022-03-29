@@ -18,10 +18,4 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj" ExcludeAssets="all" Private="false" />
 	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Include="..\BloomFilter\BloomFilter.cs">
-	    <Link>BloomFilter.cs</Link>
-	  </Compile>
-	</ItemGroup>
 </Project>
