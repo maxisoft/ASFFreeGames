@@ -1,0 +1,229 @@
+name: Plugin-publish
+
+on: [push, pull_request]
+
+env:
+  CONFIGURATION: Release
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  DOTNET_SDK_VERSION: 6.0.x
+  NET_CORE_VERSION: net6.0
+  NET_FRAMEWORK_VERSION: net48
+  PLUGIN_NAME: MyAwesomePlugin
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3.0.0
+      with:
+        submodules: recursive
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v2.0.0
+      with:
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+
+    - name: Verify .NET Core
+      run: dotnet --info
+
+    - name: Restore packages in preparation for plugin publishing
+      run: dotnet restore ${{ env.PLUGIN_NAME }} -p:ContinuousIntegrationBuild=true --nologo
+
+    - name: Publish plugin on Unix
+      if: startsWith(matrix.os, 'macos-') || startsWith(matrix.os, 'ubuntu-')
+      env:
+        VARIANTS: generic
+      shell: sh
+      run: |
+        set -eu
+
+        publish() {
+            dotnet publish "$PLUGIN_NAME" -c "$CONFIGURATION" -f "$NET_CORE_VERSION" -o "out/${1}/${PLUGIN_NAME}" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
+
+            # By default use fastest compression
+            seven_zip_args="-mx=1"
+            zip_args="-1"
+
+            # Include extra logic for builds marked for release
+            case "$GITHUB_REF" in
+                "refs/tags/"*)
+                    # Tweak compression args for release publishing
+                    seven_zip_args="-mx=9 -mfb=258 -mpass=15"
+                    zip_args="-9"
+                    ;;
+            esac
+
+            # Create the final zip file
+            case "$(uname -s)" in
+                "Darwin")
+                    # We prefer to use zip on OS X as 7z implementation on that OS doesn't handle file permissions (chmod +x)
+                    if command -v zip >/dev/null; then
+                        (
+                            cd "${GITHUB_WORKSPACE}/out/${1}"
+                            zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
+                        )
+                    elif command -v 7z >/dev/null; then
+                        7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
+                    else
+                        echo "ERROR: No supported zip tool!"
+                        return 1
+                    fi
+                    ;;
+                *)
+                    if command -v 7z >/dev/null; then
+                        7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
+                    elif command -v zip >/dev/null; then
+                        (
+                            cd "${GITHUB_WORKSPACE}/out/${1}"
+                            zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
+                        )
+                    else
+                        echo "ERROR: No supported zip tool!"
+                        return 1
+                    fi
+                    ;;
+            esac
+        }
+
+        jobs=""
+
+        for variant in $VARIANTS; do
+            publish "$variant" &
+            jobs="$jobs $!"
+        done
+
+        for job in $jobs; do
+            wait "$job"
+        done
+
+    - name: Publish plugin on Windows
+      if: startsWith(matrix.os, 'windows-')
+      env:
+        VARIANTS: generic generic-netf
+      shell: pwsh
+      run: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $ProgressPreference = 'SilentlyContinue'
+
+        $PublishBlock = {
+            param($variant)
+
+            Set-StrictMode -Version Latest
+            $ErrorActionPreference = 'Stop'
+            $ProgressPreference = 'SilentlyContinue'
+
+            Set-Location "$env:GITHUB_WORKSPACE"
+
+            if ($variant -like '*-netf') {
+                $targetFramework = $env:NET_FRAMEWORK_VERSION
+            } else {
+                $targetFramework = $env:NET_CORE_VERSION
+            }
+
+            dotnet publish "$env:PLUGIN_NAME" -c "$env:CONFIGURATION" -f "$targetFramework" -o "out\$variant\$env:PLUGIN_NAME" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
+
+            if ($LastExitCode -ne 0) {
+                throw "Last command failed."
+            }
+
+            # By default use fastest compression
+            $compressionArgs = '-mx=1'
+
+            # Include extra logic for builds marked for release
+            if ($env:GITHUB_REF -like 'refs/tags/*') {
+                # Tweak compression args for release publishing
+                $compressionArgs = '-mx=9', '-mfb=258', '-mpass=15'
+            }
+
+            # Create the final zip file
+            7z a -bd -slp -tzip -mm=Deflate $compressionArgs "out\$env:PLUGIN_NAME-$variant.zip" "$env:GITHUB_WORKSPACE\out\$variant\*"
+
+            if ($LastExitCode -ne 0) {
+                throw "Last command failed."
+            }
+        }
+
+        foreach ($variant in $env:VARIANTS.Split([char[]] $null, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+            Start-Job -Name "$variant" $PublishBlock -ArgumentList "$variant"
+        }
+
+        Get-Job | Receive-Job -Wait
+
+    - name: Upload generic
+      continue-on-error: true
+      uses: actions/upload-artifact@v3.0.0
+      with:
+        name: ${{ matrix.os }}_${{ env.PLUGIN_NAME }}-generic
+        path: out/${{ env.PLUGIN_NAME }}-generic.zip
+
+    - name: Upload generic-netf
+      continue-on-error: true
+      if: startsWith(matrix.os, 'windows-')
+      uses: actions/upload-artifact@v3.0.0
+      with:
+        name: ${{ matrix.os }}_${{ env.PLUGIN_NAME }}-generic-netf
+        path: out/${{ env.PLUGIN_NAME }}-generic-netf.zip
+
+  release:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3.0.0
+
+    # TODO: It'd be perfect if we could match final artifacts to the platform they target, so e.g. linux build comes from the linux machine
+    # However, that is currently impossible due to https://github.com/dotnet/msbuild/issues/3897
+    # Therefore, we'll (sadly) pull artifacts from Windows machine only for now
+    - name: Download generic artifact from windows-latest
+      uses: actions/download-artifact@v3.0.0
+      with:
+        name: windows-latest_${{ env.PLUGIN_NAME }}-generic
+        path: out
+
+    - name: Download generic-netf artifact from windows-latest
+      uses: actions/download-artifact@v3.0.0
+      with:
+        name: windows-latest_${{ env.PLUGIN_NAME }}-generic-netf
+        path: out
+
+    - name: Create GitHub release
+      id: github_release
+      uses: actions/create-release@v1.1.4
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ env.PLUGIN_NAME }} V${{ github.ref }}
+        body_path: .github/RELEASE_TEMPLATE.md
+        prerelease: true
+
+    - name: Upload generic to GitHub release
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.github_release.outputs.upload_url }}
+        asset_path: out/${{ env.PLUGIN_NAME }}-generic.zip
+        asset_name: ${{ env.PLUGIN_NAME }}-generic.zip
+        asset_content_type: application/zip
+
+    - name: Upload generic-netf to GitHub release
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.github_release.outputs.upload_url }}
+        asset_path: out/${{ env.PLUGIN_NAME }}-generic-netf.zip
+        asset_name: ${{ env.PLUGIN_NAME }}-generic-netf.zip
+        asset_content_type: application/zip

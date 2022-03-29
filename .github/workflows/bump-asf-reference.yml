@@ -1,0 +1,70 @@
+# This action is responsible for automatically bumping the ArchiSteamFarm submodule reference to the latest stable release
+# Please note that this DOES NOT update the actual commit the submodule itself is binded to, as that part is the responsibility of the developer or chosen dependencies management tool (such as Renovate or Dependabot), that will actually build and test whether the plugin project requires any kind of corrections before doing so
+# Because of that, commit created through this workflow can't possibly create any kind of build regression, as we only limit the actual commit the above action can actually update to
+name: Plugin-bump-asf-reference
+
+on:
+  schedule:
+  - cron: '17 1 * * *'
+
+  workflow_dispatch:
+
+env:
+  # You can specify your own credentials if you'd like to, simply change ARCHIBOT_GPG_PRIVATE_KEY and/or ARCHIBOT_GITHUB_TOKEN secrets here to the ones you want to use
+  GPG_PRIVATE_KEY: ${{ secrets.ARCHIBOT_GPG_PRIVATE_KEY }} # Optional, if secret not provided, will skip signing commit with GPG key
+  PUSH_GITHUB_TOKEN: ${{ secrets.ARCHIBOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }} # Optional, if secret not provided, will use the default token
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3.0.0
+      with:
+        token: ${{ env.PUSH_GITHUB_TOKEN }}
+
+    - name: Fetch latest ArchiSteamFarm release
+      id: asf-release
+      uses: pozetroninc/github-action-get-latest-release@v0.6.0
+      with:
+        owner: JustArchiNET
+        repo: ArchiSteamFarm
+        excludes: draft,prerelease
+
+    - name: Import GPG key for signing
+      uses: crazy-max/ghaction-import-gpg@v4.3.0
+      if: ${{ env.GPG_PRIVATE_KEY != null }}
+      with:
+        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
+    - name: Update ASF reference if needed
+      env:
+        LATEST_ASF_RELEASE: ${{ steps.asf-release.outputs.release }}
+      shell: sh
+      run: |
+        set -eu
+
+        git config -f .gitmodules submodule.ArchiSteamFarm.branch "$LATEST_ASF_RELEASE"
+
+        git add -A ".gitmodules"
+
+        if ! git diff --cached --quiet; then
+            if ! git config --get user.email > /dev/null; then
+                git config --local user.email "action@github.com"
+            fi
+
+            if ! git config --get user.name > /dev/null; then
+                git config --local user.name "GitHub Action"
+            fi
+
+            git commit -m "Automatic ArchiSteamFarm reference update to ${LATEST_ASF_RELEASE}"
+        fi
+
+    - name: Push changes to the repo
+      uses: ad-m/github-push-action@v0.6.0
+      with:
+        github_token: ${{ env.PUSH_GITHUB_TOKEN }}
+        branch: ${{ github.ref }}

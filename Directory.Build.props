@@ -1,0 +1,43 @@
+<Project>
+	<Import Project="ArchiSteamFarm/Directory.Build.props" />
+
+	<PropertyGroup>
+		<PluginName>MyAwesomePlugin</PluginName>
+		<Version>1.0.0.0</Version>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<AnalysisMode>AllEnabledByDefault</AnalysisMode>
+		<ApplicationIcon />
+		<Authors>YourName</Authors>
+		<Company>$(Authors)</Company>
+		<Copyright>Copyright © 2021-$([System.DateTime]::UtcNow.Year) $(Company)</Copyright>
+		<Description>$(PluginName) description.</Description>
+		<PackageIcon />
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/$(Company)/$(PluginName)</PackageProjectUrl>
+		<PackageReleaseNotes>$(PackageProjectUrl)/releases</PackageReleaseNotes>
+		<RepositoryUrl>$(PackageProjectUrl).git</RepositoryUrl>
+	</PropertyGroup>
+
+	<!-- Reset ASF signing settings, as we'll use our own logic -->
+	<PropertyGroup>
+		<AssemblyOriginatorKeyFile />
+		<PublicSign>false</PublicSign>
+		<SignAssembly>false</SignAssembly>
+	</PropertyGroup>
+
+	<!-- Enable public signing if not part of Visual Studio, which is too stupid to understand what public signing is -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(BuildingInsideVisualStudio)' != 'true' AND EXISTS('resources/$(PluginName).snk.pub')">
+		<AssemblyOriginatorKeyFile>../resources/$(PluginName).snk.pub</AssemblyOriginatorKeyFile>
+		<PublicSign>true</PublicSign>
+		<SignAssembly>true</SignAssembly>
+	</PropertyGroup>
+
+	<!-- Private SNK signing -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' AND EXISTS('resources/$(PluginName).snk')">
+		<AssemblyOriginatorKeyFile>../resources/$(PluginName).snk</AssemblyOriginatorKeyFile>
+		<PublicSign>false</PublicSign>
+		<SignAssembly>true</SignAssembly>
+	</PropertyGroup>
+</Project>

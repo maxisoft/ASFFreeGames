@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAwesomePlugin", "MyAwesomePlugin\MyAwesomePlugin.csproj", "{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchiSteamFarm", "ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj", "{50744701-4C54-49BE-8189-518DA2A65797}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		DebugFast|Any CPU = DebugFast|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.DebugFast|Any CPU.ActiveCfg = DebugFast|Any CPU
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.DebugFast|Any CPU.Build.0 = DebugFast|Any CPU
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A64A35BD-25B6-4F4F-8C3C-E0CF9CE843B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.DebugFast|Any CPU.ActiveCfg = DebugFast|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.DebugFast|Any CPU.Build.0 = DebugFast|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50744701-4C54-49BE-8189-518DA2A65797}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ConfigureAwaitChecker.Analyzer" PrivateAssets="all" />
+		<PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
+		<PackageReference Include="System.Composition.AttributedModel" IncludeAssets="compile" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="JustArchiNET.Madness" IncludeAssets="compile" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj" ExcludeAssets="all" Private="false" />
+	</ItemGroup>
+</Project>
