@@ -93,7 +93,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 		try {
 			var games = await RedditHelper.ListGames().ConfigureAwait(false);
 
-			ArchiLogger.LogGenericInfo($"found {games.Count} games", nameof(CollectGames));
+			ArchiLogger.LogGenericInfo($"found {games.Count} free games on reddit", nameof(CollectGames));
 
 			foreach (Bot bot in Bots) {
 				if (!bot.IsConnectedAndLoggedOn) {

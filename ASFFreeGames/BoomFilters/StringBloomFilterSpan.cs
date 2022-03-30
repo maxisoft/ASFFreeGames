@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Maxisoft.Utils.Collections.Spans;
 
 namespace BloomFilter {
