@@ -11,13 +11,7 @@ using Maxisoft.Utils.Collections.Spans;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Maxisoft.ASF;
-
-public record struct RedditGameEntry(string Identifier, bool FreeToPlay, long date);
-
-internal class RedditGameEntryComparerOnDate : IComparer<RedditGameEntry> {
-	public int Compare(RedditGameEntry x, RedditGameEntry y) => x.date.CompareTo(y.date);
-}
+namespace Maxisoft.ASF.Reddit;
 
 internal sealed class RedditHelper {
 	private const string User = "ASFinfo";
@@ -115,6 +109,7 @@ internal sealed class RedditHelper {
 
 		var data = payload.Content.Value<JObject>("data");
 
+		// ReSharper disable once ConditionIsAlwaysTrueOrFalse
 		if (data is null || !data.TryGetValue("children", out var children) || children is null) {
 			return res;
 		}

@@ -14,6 +14,7 @@ using ArchiSteamFarm.Core;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
 using JetBrains.Annotations;
+using Maxisoft.ASF.Reddit;
 using Newtonsoft.Json.Linq;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
@@ -56,6 +57,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 
 		if (BotContexts.TryRemove(bot.BotName, out var ctx)) {
 			await ctx.Save().ConfigureAwait(false);
+			ctx.Dispose();
 		}
 
 		if ((Bots.Count == 0)) {
@@ -106,19 +108,23 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 
 				bool save = false;
 				BotContext context = BotContexts[bot.BotName];
-				string message = string.Join(",", games.Where(static g => !g.FreeToPlay).Select(static g => g.Identifier).Where(id => !context.HasApp(id)));
-				ArchiLogger.LogGenericDebug($"collecting games on {bot.BotName} {message}", nameof(CollectGames));
+				//string message = string.Join(",", games.Where(static g => !g.FreeToPlay).Select(static g => g.Identifier).Where(id => !context.HasApp(id)));
+				//ArchiLogger.LogGenericDebug($"collecting games on {bot.BotName} {message}", nameof(CollectGames));
 
 				foreach ((string? identifier, bool freeToPlay, long time) in games) {
 					if (freeToPlay) {
 						continue;
 					}
 
-					if (context.HasApp(identifier)) {
+					if (identifier is null || !GameIdentifier.TryParse(identifier, out var gid)) {
 						continue;
 					}
 
-					string? resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {identifier}").ConfigureAwait(false);
+					if (context.HasApp(gid)) {
+						continue;
+					}
+
+					string? resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {gid}").ConfigureAwait(false);
 					bool success = false;
 
 					if (!string.IsNullOrWhiteSpace(resp)) {
@@ -129,13 +135,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 
 					if (success) {
 						lock (context) {
-							context.SaveApp(identifier);
+							context.SaveApp(gid);
 						}
 
 						save = true;
 					}
 					else if (Math.Abs(Utilities.GetUnixTime() - time) > TimeSpan.FromHours(24).TotalMilliseconds) {
-						context.AppTickCount(identifier, increment: true);
+						context.AppTickCount(gid, increment: true);
 					}
 				}
 
