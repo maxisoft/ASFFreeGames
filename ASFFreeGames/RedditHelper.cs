@@ -1,16 +1,23 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Web.Responses;
+using BloomFilter;
 using JetBrains.Annotations;
+using Maxisoft.Utils.Collections.Spans;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Maxisoft.ASF;
 
 public record struct RedditGameEntry(string Identifier, bool FreeToPlay, long date);
+
+internal class RedditGameEntryComparerOnDate : IComparer<RedditGameEntry> {
+	public int Compare(RedditGameEntry x, RedditGameEntry y) => x.date.CompareTo(y.date);
+}
 
 internal sealed class RedditHelper {
 	private const string User = "ASFinfo";
@@ -24,7 +31,64 @@ internal sealed class RedditHelper {
 		)
 	);
 
-	public async ValueTask<List<RedditGameEntry>> ListGames() {
+	private const int PoolMaxGameEntry = 1024;
+	private static readonly ArrayPool<RedditGameEntry> ArrayPool = ArrayPool<RedditGameEntry>.Create(PoolMaxGameEntry, 1);
+	private const int BloomFilterBufferSize = 8;
+	private static readonly Lazy<float> BloomFilterK = new(static () => StringBloomFilterSpan.SolveK(BloomFilterBufferSize * BitSpan.LongNumBit, 1e-2));
+
+	private RedditGameEntry[] LoadMessages(JToken children) {
+		Regex regex = CommandRegex.Value;
+		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
+		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
+		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, BloomFilterK.Value);
+
+		try {
+			SpanList<RedditGameEntry> list = new(buffer);
+
+			foreach (var comment in children.Children<JObject>()) {
+				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
+				var text = commentData?.Value<string>("body") ?? string.Empty;
+				var date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
+				var match = regex.Match(text);
+
+				if (!match.Success) {
+					continue;
+				}
+
+				bool freeToPlay = match.Groups["free"].Success;
+				RedditGameEntry gameEntry;
+
+				foreach (Group matchGroup in match.Groups) {
+					if (matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
+						gameEntry = new RedditGameEntry(matchGroup.Value, freeToPlay, date);
+
+						if (bloomFilter.Contains(gameEntry.Identifier)) {
+							// remove potential duplicates
+							list.Remove(in gameEntry);
+						}
+
+						list.Add(in gameEntry);
+						bloomFilter.Add(gameEntry.Identifier);
+
+						while (list.Count >= list.Capacity) {
+							// should not append but better safe than sorry
+							list.RemoveAt(0);
+						}
+					}
+				}
+			}
+
+			RedditGameEntry[] res = list.ToArray();
+			Array.Sort(res, new RedditGameEntryComparerOnDate());
+
+			return res;
+		}
+		finally {
+			ArrayPool.Return(buffer);
+		}
+	}
+
+	public async ValueTask<ICollection<RedditGameEntry>> ListGames() {
 		var webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
 		var res = new List<RedditGameEntry>();
 
@@ -55,29 +119,6 @@ internal sealed class RedditHelper {
 			return res;
 		}
 
-		var regex = CommandRegex.Value;
-
-		foreach (var comment in children.Children<JObject>()) {
-			JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
-			var text = commentData?.Value<string>("body") ?? string.Empty;
-			var date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
-			var match = regex.Match(text);
-
-			if (!match.Success) {
-				continue;
-			}
-
-			bool freeToPlay = match.Groups["free"].Success;
-
-			foreach (Group matchGroup in match.Groups) {
-				if (matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
-					res.Add(new RedditGameEntry(matchGroup.Value, freeToPlay, date));
-				}
-			}
-		}
-
-		res.Sort(static (entry, otherEntry) => entry.date.CompareTo(otherEntry.date));
-
-		return res;
+		return LoadMessages(children);
 	}
 }

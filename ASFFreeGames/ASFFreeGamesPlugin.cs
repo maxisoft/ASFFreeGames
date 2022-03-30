@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -90,7 +91,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection {
 		}
 
 		try {
-			List<RedditGameEntry> games = await RedditHelper.ListGames().ConfigureAwait(false);
+			var games = await RedditHelper.ListGames().ConfigureAwait(false);
 
 			ArchiLogger.LogGenericInfo($"found {games.Count} games", nameof(CollectGames));
 
