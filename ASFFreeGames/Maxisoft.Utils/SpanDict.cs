@@ -173,8 +173,6 @@ namespace Maxisoft.Utils.Collections.Spans {
 			// TODO use RuntimeHelpers.IsReferenceOrContainsReferences when available
 			// Then only reset to default (ie Buckets[i] = default) references
 
-			var miniStack = new SpanList<int>(stackalloc int[16]);
-
 			var index = IndexOf(in key);
 			var originalIndex = index;
 
@@ -205,16 +203,7 @@ namespace Maxisoft.Utils.Collections.Spans {
 					Mask.Set(index, true);
 					Mask.Set(forward, false);
 
-					if (miniStack.Capacity == miniStack.Count) {
-						Buckets[forward] = default;
-					}
-					else {
-						var fi = miniStack.BinarySearch(forward);
-
-						if (fi < 0) {
-							miniStack.Insert(~fi, forward);
-						}
-					}
+					Buckets[forward] = default;
 
 					index = forward;
 				}
@@ -224,12 +213,6 @@ namespace Maxisoft.Utils.Collections.Spans {
 
 			if (!Mask[originalIndex]) {
 				Buckets[originalIndex] = default;
-			}
-
-			foreach (var i in miniStack) {
-				if (!Mask[i]) {
-					Buckets[i] = default;
-				}
 			}
 
 			return true;
@@ -278,17 +261,23 @@ namespace Maxisoft.Utils.Collections.Spans {
 		[SuppressMessage("Design", "CA1000")]
 		public static SpanDict<TKey, TValue> CreateFromBuffers<TBucket, TMask>(
 			Span<TBucket> buckets, Span<TMask> mask,
-			IEqualityComparer<TKey>? comparer = null, bool restore = true
+			IEqualityComparer<TKey>? comparer = null, int count = -1
 		) where TBucket : struct where TMask : struct {
 			var cBucket = MemoryMarshal.Cast<TBucket, KeyValuePair<TKey, TValue>>(buckets);
 			var cMask = MemoryMarshal.Cast<TMask, long>(mask);
 			var res = new SpanDict<TKey, TValue>(cBucket, cMask, comparer);
 
-			if (!restore) {
+			if (count >= 0) {
+				res.Count = count;
+
+				if ((uint) count > (uint) res.Capacity) {
+					throw new ArgumentOutOfRangeException(nameof(count), count, null);
+				}
+
 				return res;
 			}
 
-			var count = 0;
+			count = 0;
 
 			foreach (var exists in res.Mask) {
 				count += exists ? 1 : 0;
@@ -296,13 +285,17 @@ namespace Maxisoft.Utils.Collections.Spans {
 
 			res.Count = count;
 
+			if ((uint) count > (uint) res.Capacity) {
+				throw new ArgumentOutOfRangeException(nameof(mask));
+			}
+
 			return res;
 		}
 
 		[SuppressMessage("Design", "CA1000")]
 		public static SpanDict<TKey, TValue> CreateFromBuffer<TSpan>(
 			Span<TSpan> buff,
-			IEqualityComparer<TKey>? comparer = null, bool restore = true
+			IEqualityComparer<TKey>? comparer = null, int count = -1
 		) where TSpan : unmanaged {
 			unsafe {
 				while ((buff.Length > 0) && ((buff.Length * sizeof(TSpan)) % sizeof(long) != 0)) {
@@ -314,7 +307,7 @@ namespace Maxisoft.Utils.Collections.Spans {
 			var reserved = BitSpan.ComputeLongArraySize(kvSpan.Length);
 			var longSpan = MemoryMarshal.Cast<TSpan, long>(buff);
 
-			return CreateFromBuffers(longSpan.Slice(reserved), longSpan.Slice(0, reserved), comparer, restore);
+			return CreateFromBuffers(longSpan.Slice(reserved), longSpan.Slice(0, reserved), comparer, count);
 		}
 	}
 }
