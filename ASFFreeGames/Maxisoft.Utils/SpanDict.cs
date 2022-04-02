@@ -170,16 +170,17 @@ namespace Maxisoft.Utils.Collections.Spans {
 		}
 
 		public bool Remove(in TKey key) {
-			// TODO use RuntimeHelpers.IsReferenceOrContainsReferences when available
-			// Then only reset to default (ie Buckets[i] = default) references
-
 			var index = IndexOf(in key);
-			var originalIndex = index;
 
 			if (index < 0) {
 				return false;
 			}
 
+			return RemoveAt(index);
+		}
+
+		private bool RemoveAt(int index) {
+			var originalIndex = index;
 			Mask.Set(index, false);
 			Count -= 1;
 
@@ -203,7 +204,9 @@ namespace Maxisoft.Utils.Collections.Spans {
 					Mask.Set(index, true);
 					Mask.Set(forward, false);
 
-					Buckets[forward] = default;
+					if (RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>()) {
+						Buckets[forward] = default;
+					}
 
 					index = forward;
 				}
@@ -211,7 +214,7 @@ namespace Maxisoft.Utils.Collections.Spans {
 				forward = (forward + 1) % Capacity;
 			} while (c++ < limit);
 
-			if (!Mask[originalIndex]) {
+			if (RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>() && !Mask[originalIndex]) {
 				Buckets[originalIndex] = default;
 			}
 
