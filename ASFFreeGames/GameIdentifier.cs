@@ -2,16 +2,11 @@
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Maxisoft.ASF;
 
 // ReSharper disable once InconsistentNaming
-public enum GameIdentifierType : sbyte {
-	None = 0,
-	Sub = 1,
-	App = 2
-}
-
 [SuppressMessage("Design", "CA1051")]
 public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 	public readonly long Id;
@@ -23,7 +18,7 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 		Type = type;
 	}
 
-	public bool Valid => Id > 0;
+	public bool Valid => (Id > 0) && Type is >= GameIdentifierType.None and <= GameIdentifierType.App;
 
 	public static bool operator ==(GameIdentifier left, GameIdentifier right) => left.Equals(right);
 
