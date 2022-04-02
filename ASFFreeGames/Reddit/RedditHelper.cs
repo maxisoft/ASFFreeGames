@@ -93,7 +93,7 @@ internal sealed class RedditHelper {
 		ObjectResponse<JToken>? payload;
 
 		try {
-			payload = await webBrowser.UrlGetToJsonObject<JToken>(GetUrl()).ConfigureAwait(false);
+			payload = await webBrowser.UrlGetToJsonObject<JToken>(GetUrl(), rateLimitingDelay: 500).ConfigureAwait(false);
 		}
 		catch (Exception e) when (e is JsonException or IOException) {
 			return res;
