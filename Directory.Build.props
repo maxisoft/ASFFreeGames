@@ -3,7 +3,7 @@
 
 	<PropertyGroup>
 		<PluginName>ASFFreeGames</PluginName>
-		<Version>1.1.0.0</Version>
+		<Version>1.2.0.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -11,10 +11,10 @@
 		<ApplicationIcon />
 		<Authors>Maxisoft</Authors>
 		<Company>$(Authors)</Company>
-		<Copyright>Copyright © 2021-$([System.DateTime]::UtcNow.Year) $(Company)</Copyright>
+		<Copyright>Copyright © 2022-$([System.DateTime]::UtcNow.Year) $(Company)</Copyright>
 		<Description>Gather free steam games</Description>
 		<PackageIcon />
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageLicenseExpression>AGPL</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/$(Company)/$(PluginName)</PackageProjectUrl>
 		<PackageReleaseNotes>$(PackageProjectUrl)/releases</PackageReleaseNotes>
 		<RepositoryUrl>$(PackageProjectUrl).git</RepositoryUrl>
