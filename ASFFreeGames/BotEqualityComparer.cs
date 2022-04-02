@@ -18,10 +18,6 @@ internal sealed class BotEqualityComparer : IEqualityComparer<Bot> {
 			return false;
 		}
 
-		if (x.GetType() != y.GetType()) {
-			return false;
-		}
-
 		return (x.BotName == y.BotName) && (x.SteamID == y.SteamID);
 	}
 
