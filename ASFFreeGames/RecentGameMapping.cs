@@ -101,8 +101,8 @@ public class RecentGameMapping {
 			CountRef = dict.Count;
 		}
 
-		if (!dict.ContainsKey(item)) {
-			dict.Add(item, date);
+		if (!dict.ContainsKey(in item)) {
+			dict.Add(in item, date);
 			CountRef = dict.Count;
 
 			return true;
@@ -111,7 +111,7 @@ public class RecentGameMapping {
 		return false;
 	}
 
-	private static int EnsureFillFactor(ref SpanDict<GameIdentifier, long> dict, int maxIter = 16) {
+	private static int EnsureFillFactor(ref SpanDict<GameIdentifier, long> dict, int maxIter = 32) {
 		int c = maxIter;
 		int res = 0;
 
@@ -127,7 +127,7 @@ public class RecentGameMapping {
 					}
 				}
 
-				if (dict.Remove(minId)) {
+				if (dict.Remove(in minId)) {
 					res++;
 				}
 			}
