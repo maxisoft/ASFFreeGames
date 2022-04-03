@@ -133,7 +133,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		Bot[] reorderedBots;
 
 		lock (BotContexts) {
-			TimeSpan orderByRunKeySelector(Bot bot) => BotContexts.TryGetValue(bot.BotName, out var ctx) ? ctx.RunElapsed : TimeSpan.MaxValue;
+			long orderByRunKeySelector(Bot bot) => BotContexts.TryGetValue(bot.BotName, out var ctx) ? ctx.RunElapsedMilli : long.MaxValue;
 			int comparison(Bot x, Bot y) => orderByRunKeySelector(y).CompareTo(orderByRunKeySelector(x)); // sort in descending order
 			reorderedBots = Bots.ToArray();
 			Array.Sort(reorderedBots, comparison);

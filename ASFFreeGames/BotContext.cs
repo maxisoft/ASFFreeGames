@@ -16,11 +16,11 @@ internal sealed class BotContext : IDisposable {
 	private readonly WeakReference<Bot> Bot;
 	private readonly TimeSpan BlacklistTimeout = TimeSpan.FromDays(1);
 	private readonly CompletedAppList CompletedApps = new();
-	private Stopwatch LastRun = new();
+	private long LastRunMilli;
 
 	public BotContext(Bot bot) {
 		Bot = new WeakReference<Bot>(bot);
-		LastRun.Start();
+		NewRun();
 	}
 
 	private string CompletedAppFilePath() {
@@ -107,11 +107,7 @@ internal sealed class BotContext : IDisposable {
 
 	public void Dispose() => CompletedApps.Dispose();
 
-	public TimeSpan RunElapsed => LastRun.Elapsed;
+	public long RunElapsedMilli => Environment.TickCount64 - LastRunMilli;
 
-	public void NewRun() {
-		// note LastRun.Restart() got trimmed out
-		LastRun.Reset();
-		LastRun.Start();
-	}
+	public void NewRun() => LastRunMilli = Environment.TickCount64;
 }
