@@ -101,12 +101,12 @@ internal sealed class CompletedAppList : IDisposable {
 					CompletedApp.Reload();
 				}
 				catch (InvalidDataException e) {
-					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericWarningException(e, $"{nameof(CompletedApp)}.{nameof(CompletedApp.Reload)}");
+					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericWarningException(e, $"[FreeGames] {nameof(CompletedApp)}.{nameof(CompletedApp.Reload)}");
 					CompletedApp.Reload(true);
 				}
 			}
 			else {
-				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError("Unable to load previous completed app dict", nameof(LoadFromFile));
+				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError("[FreeGames] Unable to load previous completed app dict", nameof(LoadFromFile));
 			}
 		}
 		catch (FileNotFoundException) {

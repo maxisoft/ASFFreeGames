@@ -159,7 +159,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		try {
 			var games = await RedditHelper.ListGames().ConfigureAwait(false);
 
-			ArchiLogger.LogGenericInfo($"found {games.Count} free games on reddit", nameof(CollectGames));
+			ArchiLogger.LogGenericInfo($"[FreeGames] found {games.Count} free games on reddit", nameof(CollectGames));
 
 			foreach (Bot bot in bots) {
 				if (cancellationToken.IsCancellationRequested) {
@@ -194,7 +194,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 					bool success = false;
 
 					if (!string.IsNullOrWhiteSpace(resp)) {
-						ArchiLogger.LogGenericInfo($"{resp}", nameof(CollectGames));
+						ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
 						success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
 						success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
 					}

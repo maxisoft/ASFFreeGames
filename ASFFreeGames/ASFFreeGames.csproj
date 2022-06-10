@@ -22,4 +22,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj" ExcludeAssets="all" Private="false" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="..\Directory.Build.props">
+	    <Link>Directory.Build.props</Link>
+	  </Content>
+	</ItemGroup>
 </Project>
