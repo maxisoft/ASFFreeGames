@@ -1,3 +1,3 @@
 <Project>
-	<!--<Import Project="ArchiSteamFarm/Directory.Packages.props" />-->
+	<Import Project="ArchiSteamFarm/Directory.Packages.props" />
 </Project>
