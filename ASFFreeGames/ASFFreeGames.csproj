@@ -5,7 +5,6 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<DebugSymbols>True</DebugSymbols>
 		<DebugType>pdbonly</DebugType>
-		<NoWarn>NU1507</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

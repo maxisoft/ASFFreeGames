@@ -3,7 +3,7 @@
 
 	<PropertyGroup>
 		<PluginName>ASFFreeGames</PluginName>
-		<Version>1.2.1.0</Version>
+		<Version>1.2.2.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -18,6 +18,10 @@
 		<PackageProjectUrl>https://github.com/$(Company)/$(PluginName)</PackageProjectUrl>
 		<PackageReleaseNotes>$(PackageProjectUrl)/releases</PackageReleaseNotes>
 		<RepositoryUrl>$(PackageProjectUrl).git</RepositoryUrl>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<NoWarn>NU1507</NoWarn>
 	</PropertyGroup>
 
 	<!-- Reset ASF signing settings, as we'll use our own logic -->
