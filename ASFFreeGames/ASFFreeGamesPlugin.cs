@@ -29,6 +29,7 @@ namespace Maxisoft.ASF;
 [UsedImplicitly]
 internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2 {
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
+	private const int DayInSeconds = 24 * 60 * 60;
 	public string Name => nameof(ASFFreeGamesPlugin);
 	public Version Version => typeof(ASFFreeGamesPlugin).Assembly.GetName().Version ?? throw new InvalidOperationException(nameof(Version));
 
@@ -204,9 +205,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						}
 
 						save = true;
-						Interlocked.Increment(ref res);
+						res++;
 					}
-					else if (Math.Abs(Utilities.GetUnixTime() - time) > TimeSpan.FromHours(24).TotalSeconds) {
+					else if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
 						context.AppTickCount(gid, increment: true);
 					}
 				}
