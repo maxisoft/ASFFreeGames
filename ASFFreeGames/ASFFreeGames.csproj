@@ -3,7 +3,8 @@
 		<OutputType>Library</OutputType>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<TargetFramework>net6.0</TargetFramework>
-		<TargetFrameworks />
+		<DebugSymbols>True</DebugSymbols>
+		<DebugType>pdbonly</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
