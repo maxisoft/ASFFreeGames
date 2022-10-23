@@ -95,7 +95,11 @@ internal sealed class CompletedAppList : IDisposable {
 
 			if (CompletedAppBuffer is { Length: > 0 } && (ms.Length == CompletedAppMemory.Length * sizeof(long))) {
 				ms.Seek(0, SeekOrigin.Begin);
-				ms.Read(MemoryMarshal.Cast<long, byte>(CompletedAppMemory.Span));
+				int size = ms.Read(MemoryMarshal.Cast<long, byte>(CompletedAppMemory.Span));
+
+				if (size != CompletedAppMemory.Length * sizeof(long)) {
+					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError("[FreeGames] Unable to load previous completed app dict", nameof(LoadFromFile));
+				}
 
 				try {
 					CompletedApp.Reload();
