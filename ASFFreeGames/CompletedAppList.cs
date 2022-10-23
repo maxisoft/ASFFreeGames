@@ -14,7 +14,7 @@ internal sealed class CompletedAppList : IDisposable {
 	private long[]? CompletedAppBuffer;
 	private const int CompletedAppBufferSize = 128;
 	private Memory<long> CompletedAppMemory => ((Memory<long>) CompletedAppBuffer!)[..CompletedAppBufferSize];
-	private readonly RecentGameMapping CompletedApp;
+	private readonly RecentGameMapping CompletedApps;
 	private const int FileCompletedAppBufferSize = CompletedAppBufferSize * sizeof(long) * 2;
 	private static readonly ArrayPool<long> LongMemoryPool = ArrayPool<long>.Create(CompletedAppBufferSize, 10);
 	private static readonly char Endianness = BitConverter.IsLittleEndian ? 'l' : 'b';
@@ -22,7 +22,7 @@ internal sealed class CompletedAppList : IDisposable {
 
 	public CompletedAppList() {
 		CompletedAppBuffer = LongMemoryPool.Rent(CompletedAppBufferSize);
-		CompletedApp = new RecentGameMapping(CompletedAppMemory);
+		CompletedApps = new RecentGameMapping(CompletedAppMemory);
 	}
 
 	~CompletedAppList() => ReturnBuffer();
@@ -102,11 +102,11 @@ internal sealed class CompletedAppList : IDisposable {
 				}
 
 				try {
-					CompletedApp.Reload();
+					CompletedApps.Reload();
 				}
 				catch (InvalidDataException e) {
-					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericWarningException(e, $"[FreeGames] {nameof(CompletedApp)}.{nameof(CompletedApp.Reload)}");
-					CompletedApp.Reload(true);
+					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericWarningException(e, $"[FreeGames] {nameof(CompletedApps)}.{nameof(CompletedApps.Reload)}");
+					CompletedApps.Reload(true);
 				}
 			}
 			else {
@@ -150,7 +150,10 @@ internal sealed class CompletedAppList : IDisposable {
 		}
 	}
 
-	public bool Add(in GameIdentifier gameIdentifier) => CompletedApp.Add(in gameIdentifier);
+	public bool Add(in GameIdentifier gameIdentifier) => CompletedApps.Add(in gameIdentifier);
+	public bool AddInvalid(in GameIdentifier gameIdentifier) => CompletedApps.AddInvalid(in gameIdentifier);
 
-	public bool Contains(in GameIdentifier gameIdentifier) => CompletedApp.Contains(in gameIdentifier);
+	public bool Contains(in GameIdentifier gameIdentifier) => CompletedApps.Contains(in gameIdentifier);
+
+	public bool ContainsInvalid(in GameIdentifier gameIdentifier) => CompletedApps.ContainsInvalid(in gameIdentifier);
 }

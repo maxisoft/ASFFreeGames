@@ -90,9 +90,15 @@ public class RecentGameMapping {
 
 	public SpanDict<GameIdentifier, long> Dict => SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span, null, checked((int) Count));
 
-	public bool Contains(in GameIdentifier item) => Dict.ContainsKey(in item);
+	public bool Contains(in GameIdentifier item) => TryGetDate(in item, out long date) && (date > 0);
+
+	public bool ContainsInvalid(in GameIdentifier item) => TryGetDate(in item, out long date) && (date < 0);
+
+	public bool TryGetDate(in GameIdentifier key, out long value) => Dict.TryGetValue(in key, out value);
 
 	public bool Add(in GameIdentifier item) => Add(in item, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+	public bool AddInvalid(in GameIdentifier item) => Add(in item, -DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
 	public bool Add(in GameIdentifier item, long date) {
 		SpanDict<GameIdentifier, long> dict = Dict;
@@ -121,8 +127,10 @@ public class RecentGameMapping {
 				GameIdentifier minId = default;
 
 				foreach (ref KeyValuePair<GameIdentifier, long> pair in dict) {
-					if (pair.Value <= minValue) {
-						minValue = pair.Value;
+					long value = Math.Abs(pair.Value);
+
+					if (value <= minValue) {
+						minValue = value;
 						minId = pair.Key;
 					}
 				}

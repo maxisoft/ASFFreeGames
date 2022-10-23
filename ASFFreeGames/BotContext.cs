@@ -45,6 +45,8 @@ internal sealed class BotContext : IDisposable {
 		}
 	}
 
+	public void RegisterInvalidApp(in GameIdentifier gameIdentifier) => CompletedApps.AddInvalid(in gameIdentifier);
+
 	public bool HasApp(in GameIdentifier gameIdentifier) {
 		if (!gameIdentifier.Valid) {
 			return false;
@@ -70,8 +72,11 @@ internal sealed class BotContext : IDisposable {
 		return bot.OwnedPackageIDs.ContainsKey(checked((uint) gameIdentifier.Id));
 	}
 
+	public bool ShouldHideErrorLogForApp(in GameIdentifier gameIdentifier) => (AppTickCount(in gameIdentifier) > 0) || CompletedApps.ContainsInvalid(in gameIdentifier);
+
 	public ulong AppTickCount(in GameIdentifier gameIdentifier, bool increment = false) {
 		ulong res = 0;
+
 		DateTime? dateTime = null;
 
 		if (AppRegistrationContexts.TryGetValue(gameIdentifier, out var tuple)) {

@@ -38,6 +38,8 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private readonly RedditHelper RedditHelper = new();
 	private readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
 	private readonly Lazy<CancellationTokenSource> CancellationTS = new(static () => new CancellationTokenSource());
+	private HashSet<GameIdentifier> PreviouslySeenAppIds = new HashSet<GameIdentifier>();
+	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = new[] { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage };
 
 	private Timer? Timer;
 
@@ -157,9 +159,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		int res = 0;
 
 		try {
-			var games = await RedditHelper.ListGames().ConfigureAwait(false);
+			ICollection<RedditGameEntry> games = await RedditHelper.ListGames().ConfigureAwait(false);
 
-			ArchiLogger.LogGenericInfo($"[FreeGames] found {games.Count} free games on reddit", nameof(CollectGames));
+			LogNewGameCount(games);
 
 			foreach (Bot bot in bots) {
 				if (cancellationToken.IsCancellationRequested) {
@@ -194,21 +196,30 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 					bool success = false;
 
 					if (!string.IsNullOrWhiteSpace(resp)) {
-						ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
 						success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
 						success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
+
+						if (success || !context.ShouldHideErrorLogForApp(in gid)) {
+							bot.ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
+						}
 					}
 
 					if (success) {
 						lock (context) {
-							context.RegisterApp(gid);
+							context.RegisterApp(in gid);
 						}
 
 						save = true;
 						res++;
 					}
 					else if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
-						context.AppTickCount(gid, increment: true);
+						lock (context) {
+							context.AppTickCount(in gid, increment: true);
+
+							if (InvalidAppPurchaseCodes.Any(c => resp?.Contains(c.ToString(), StringComparison.InvariantCultureIgnoreCase) ?? false)) {
+								context.RegisterInvalidApp(in gid);
+							}
+						}
 					}
 				}
 
@@ -225,6 +236,24 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		return res;
+	}
+
+	private void LogNewGameCount(ICollection<RedditGameEntry> games) {
+		int totalAppIdCounter = PreviouslySeenAppIds.Count;
+		int newGameCounter = 0;
+
+		foreach (RedditGameEntry entry in games) {
+			if (GameIdentifier.TryParse(entry.Identifier, out GameIdentifier identifier) && PreviouslySeenAppIds.Add(identifier)) {
+				newGameCounter++;
+			}
+		}
+
+		if ((totalAppIdCounter == 0) && (games.Count > 0)) {
+			ArchiLogger.LogGenericInfo($"[FreeGames] found potentially {games.Count} free games on reddit", nameof(CollectGames));
+		}
+		else if (newGameCounter > 0) {
+			ArchiLogger.LogGenericInfo($"[FreeGames] found {newGameCounter} fresh free game(s) on reddit", nameof(CollectGames));
+		}
 	}
 }
 #pragma warning restore CA1812 // ASF uses this class during runtime
