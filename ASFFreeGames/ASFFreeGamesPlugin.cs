@@ -7,6 +7,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm;
@@ -38,8 +40,10 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private readonly RedditHelper RedditHelper = new();
 	private readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
 	private readonly Lazy<CancellationTokenSource> CancellationTS = new(static () => new CancellationTokenSource());
-	private HashSet<GameIdentifier> PreviouslySeenAppIds = new HashSet<GameIdentifier>();
-	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = new[] { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage };
+	private readonly HashSet<GameIdentifier> PreviouslySeenAppIds = new();
+	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage, EPurchaseResultDetail.DoesNotOwnRequiredApp };
+	private static readonly Lazy<Regex> InvalidAppPurchaseRegex = new(BuildInvalidAppPurchaseRegex);
+
 
 	private Timer? Timer;
 
@@ -212,13 +216,15 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						save = true;
 						res++;
 					}
-					else if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
-						lock (context) {
-							context.AppTickCount(in gid, increment: true);
-
-							if (InvalidAppPurchaseCodes.Any(c => resp?.Contains(c.ToString(), StringComparison.InvariantCultureIgnoreCase) ?? false)) {
-								context.RegisterInvalidApp(in gid);
+					else {
+						if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
+							lock (context) {
+								context.AppTickCount(in gid, increment: true);
 							}
+						}
+
+						if (InvalidAppPurchaseRegex.Value.IsMatch(resp ?? "")) {
+							save |= context.RegisterInvalidApp(in gid);
 						}
 					}
 				}
@@ -254,6 +260,40 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		else if (newGameCounter > 0) {
 			ArchiLogger.LogGenericInfo($"[FreeGames] found {newGameCounter} fresh free game(s) on reddit", nameof(CollectGames));
 		}
+	}
+
+	private static Regex BuildInvalidAppPurchaseRegex() {
+		StringBuilder stringBuilder = new("^.*(?:");
+
+		foreach (EPurchaseResultDetail code in InvalidAppPurchaseCodes) {
+			stringBuilder.Append("(?:");
+			ReadOnlySpan<char> codeString = code.ToString().Replace(nameof(EPurchaseResultDetail), @"\w*", StringComparison.InvariantCultureIgnoreCase);
+			codeString = codeString.TrimStart('.');
+
+			if (codeString.Length <= 1) {
+				continue;
+			}
+
+			stringBuilder.Append(codeString[0]);
+
+			foreach (char c in codeString[1..]) {
+				if (char.IsUpper(c)) {
+					stringBuilder.Append(@"\s*");
+				}
+
+				stringBuilder.Append(c);
+			}
+
+			stringBuilder.Append(")|");
+		}
+
+		while ((stringBuilder.Length > 0) && (stringBuilder[^1] == '|')) {
+			stringBuilder.Length -= 1;
+		}
+
+		stringBuilder.Append(").*$");
+
+		return new Regex(stringBuilder.ToString(), RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 	}
 }
 #pragma warning restore CA1812 // ASF uses this class during runtime

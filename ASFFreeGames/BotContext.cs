@@ -45,7 +45,7 @@ internal sealed class BotContext : IDisposable {
 		}
 	}
 
-	public void RegisterInvalidApp(in GameIdentifier gameIdentifier) => CompletedApps.AddInvalid(in gameIdentifier);
+	public bool RegisterInvalidApp(in GameIdentifier gameIdentifier) => CompletedApps.AddInvalid(in gameIdentifier);
 
 	public bool HasApp(in GameIdentifier gameIdentifier) {
 		if (!gameIdentifier.Valid) {
