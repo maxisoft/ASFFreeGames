@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -39,12 +40,12 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 			_ => throw new ArgumentOutOfRangeException(nameof(Type))
 		};
 
-	public static bool TryParse([NotNull] string query, out GameIdentifier result) {
+	public static bool TryParse([NotNull] ReadOnlySpan<char> query, out GameIdentifier result) {
 		ulong gameID;
-		string type;
-		GameIdentifierType identifierType;
+		ReadOnlySpan<char> type;
+		GameIdentifierType identifierType = GameIdentifierType.None;
 
-		int index = query.IndexOf('/', StringComparison.Ordinal);
+		int index = query.IndexOf("/", StringComparison.Ordinal);
 
 		if ((index > 0) && (query.Length > index + 1)) {
 			if (!ulong.TryParse(query[(index + 1)..], out gameID) || (gameID == 0)) {
@@ -68,21 +69,34 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 			type = type[..3];
 		}
 
-		switch (type.ToUpperInvariant()) {
-			case "A":
-			case "APP":
-				identifierType = GameIdentifierType.App;
+		Span<char> typeUpper = stackalloc char[4];
+		typeUpper = typeUpper[..type.ToUpperInvariant(typeUpper)];
 
-				break;
-			case "S":
-			case "SUB":
-				identifierType = GameIdentifierType.Sub;
+		if (typeUpper.Length == 1) {
+			identifierType = typeUpper[0] switch {
+				'A' => GameIdentifierType.App,
+				'S' => GameIdentifierType.Sub,
+				_ => identifierType
+			};
+		}
 
-				break;
-			default:
-				identifierType = GameIdentifierType.None;
+		if (identifierType is GameIdentifierType.None) {
+			switch (typeUpper.ToString()) {
+				case "A":
+				case "APP":
+					identifierType = GameIdentifierType.App;
 
-				break;
+					break;
+				case "S":
+				case "SUB":
+					identifierType = GameIdentifierType.Sub;
+
+					break;
+				default:
+					identifierType = GameIdentifierType.None;
+
+					break;
+			}
 		}
 
 		result = new GameIdentifier((long) gameID, identifierType);
