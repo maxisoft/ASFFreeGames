@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using ArchiSteamFarm;
 using ArchiSteamFarm.Collections;
-using ArchiSteamFarm.Core;
 using ArchiSteamFarm.Localization;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
@@ -43,7 +38,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private readonly HashSet<GameIdentifier> PreviouslySeenAppIds = new();
 	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage, EPurchaseResultDetail.DoesNotOwnRequiredApp };
 	private static readonly Lazy<Regex> InvalidAppPurchaseRegex = new(BuildInvalidAppPurchaseRegex);
-
+	private readonly LoggerFilter LoggerFilter = new LoggerFilter();
 
 	private Timer? Timer;
 
@@ -196,7 +191,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						continue;
 					}
 
-					string? resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {gid}").ConfigureAwait(false);
+					string? resp;
+
+					using (LoggerFilter.DisableLoggingForAddKeyCommonErrors(_ => context.ShouldHideErrorLogForApp(in gid), bot)) {
+						resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {gid}").ConfigureAwait(false);
+					}
+
 					bool success = false;
 
 					if (!string.IsNullOrWhiteSpace(resp)) {

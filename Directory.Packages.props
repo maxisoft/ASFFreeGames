@@ -1,3 +1,6 @@
 <Project>
-	<Import Project="ArchiSteamFarm/Directory.Packages.props" />
+	<Import Project="ArchiSteamFarm/Directory.Packages.props"/>
+	<ItemGroup>
+		<PackageVersion Include="NLog" Version="4.7.11"/>
+	</ItemGroup>
 </Project>

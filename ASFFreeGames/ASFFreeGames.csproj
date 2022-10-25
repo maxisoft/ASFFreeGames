@@ -10,6 +10,7 @@
 	<ItemGroup>
 		<PackageReference Include="ConfigureAwaitChecker.Analyzer" PrivateAssets="all" />
 		<PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
+		<PackageReference Include="NLog" />
 		<PackageReference Include="System.Composition.AttributedModel" IncludeAssets="compile" />
 		<PackageReference Include="Newtonsoft.Json" />
 		<PackageReference Include="SteamKit2" />
