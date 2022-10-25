@@ -12,6 +12,10 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_SDK_VERSION: 6.0.x
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   integration:
     concurrency:
@@ -28,10 +32,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3.0.0
+      timeout-minutes: 5
       with:
         submodules: recursive
 
     - name: Setup .NET Core
+      timeout-minutes: 5
       uses: actions/setup-dotnet@v2.0.0
       with:
         dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
@@ -62,6 +68,7 @@ jobs:
 
     - name: run docker
       shell: python
+      timeout-minutes: 60
       run: | 
         import subprocess
         import sys
