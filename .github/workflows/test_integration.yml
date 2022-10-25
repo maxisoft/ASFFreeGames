@@ -1,0 +1,81 @@
+name: Integration Test
+
+on: [push, pull_request]
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  DOTNET_SDK_VERSION: 6.0.x
+
+jobs:
+  integration:
+    if: github.actor == github.repository_owner
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+        asf_docker_tag: [main, released, latest]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3.0.0
+      with:
+        submodules: recursive
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v2.0.0
+      with:
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+
+    - name: Verify .NET Core
+      run: dotnet --info
+
+    - name: Build ${{ matrix.configuration }}
+      run: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo
+
+    - name: Populate config.zip
+      shell: python
+      run: |
+        import base64
+
+        data = rb'''${{ secrets.CONFIGZIP_B64 }}'''
+        with open('config.zip', 'wb') as f:
+          f.write(base64.b64decode(data))
+
+    - name: Extract config.zip
+      run: unzip config.zip
+
+    - name: Create plugin dir
+      run: |
+        mkdir -p plugins/ASFFreeGames
+        cp --archive -f ASFFreeGames/bin/${{ matrix.configuration }}/*/ASFFreeGames.* plugins/ASFFreeGames/
+
+    - name: run docker
+      shell: python
+      run: | 
+        import subprocess
+        import sys
+
+        cmd = r"""docker run -e "ASF_CRYPTKEY=${{ secrets.ASF_CRYPTKEY }}" -v `pwd`/config:/app/config -v `pwd`/plugins:/app/plugins --name asf --pull always justarchi/archisteamfarm:${{ matrix.asf_docker_tag }}"""
+
+        with subprocess.Popen(cmd, shell=True) as process:
+            exit_code = None
+            try:
+                exit_code = process.wait(timeout=120)
+            except (TimeoutError, subprocess.TimeoutExpired):
+                print("Process reached timeout as expected")
+                process.kill()
+                exit_code = process.wait(timeout=10)
+                if exit_code is None:
+                    process.terminate()
+                sys.exit(0)
+            
+            print(f'Process stopped earlier than expected with {exit_code} code', file=sys.stderr)
+            if exit_code != 0:
+                sys.exit(exit_code)
+            sys.exit(111)
+
+
+
+
