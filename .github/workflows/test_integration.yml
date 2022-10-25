@@ -1,6 +1,11 @@
 name: Integration Test
 
-on: [push, pull_request]
+on: 
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '55 22 */3 * *'
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -13,7 +18,7 @@ jobs:
       group: integration
     if: github.actor == github.repository_owner
     strategy:
-      max-parallel: 1
+      max-parallel: 1 # only 1 else asf may crash due to parallel login using the same config file
       matrix:
         configuration: [Debug, Release]
         asf_docker_tag: [main, released, latest]
