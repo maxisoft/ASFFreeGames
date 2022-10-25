@@ -268,7 +268,10 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		foreach (EPurchaseResultDetail code in InvalidAppPurchaseCodes) {
 			stringBuilder.Append("(?:");
 			ReadOnlySpan<char> codeString = code.ToString().Replace(nameof(EPurchaseResultDetail), @"\w*", StringComparison.InvariantCultureIgnoreCase);
-			codeString = codeString.TrimStart('.');
+
+			while ((codeString.Length > 0) && (codeString[0] == '.')) {
+				codeString = codeString[1..];
+			}
 
 			if (codeString.Length <= 1) {
 				continue;
