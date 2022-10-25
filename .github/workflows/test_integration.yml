@@ -53,6 +53,7 @@ jobs:
       run: |
         mkdir -p plugins/ASFFreeGames
         cp --archive -f ASFFreeGames/bin/${{ matrix.configuration }}/*/ASFFreeGames.* plugins/ASFFreeGames/
+        du -h plugins
 
     - name: run docker
       shell: python
@@ -62,7 +63,7 @@ jobs:
 
         cmd = r"""docker run -e "ASF_CRYPTKEY=${{ secrets.ASF_CRYPTKEY }}" -v `pwd`/config:/app/config -v `pwd`/plugins:/app/plugins --name asf --pull always justarchi/archisteamfarm:${{ matrix.asf_docker_tag }}"""
 
-        with subprocess.Popen(cmd, shell=True) as process:
+        with open('out.txt', 'ab+') as out, subprocess.Popen(cmd, shell=True, stdout=out, stderr=out) as process:
             exit_code = None
             try:
                 exit_code = process.wait(timeout=120)
@@ -72,13 +73,25 @@ jobs:
                 exit_code = process.wait(timeout=10)
                 if exit_code is None:
                     process.terminate()
+
+                out.flush()
+                out.seek(0)
+                output = out.read()
+                print(output.decode())
+                assert b'CollectGames() [FreeGames] found' in output, "unable to start docker with ASFFreeGames installed"
                 sys.exit(0)
-            
+
             print(f'Process stopped earlier than expected with {exit_code} code', file=sys.stderr)
             if exit_code != 0:
                 sys.exit(exit_code)
             sys.exit(111)
 
 
+    - name: Upload stdout
+      continue-on-error: true
+      uses: actions/upload-artifact@v3.0.0
+      with:
+        name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
+        path: out.txt
 
 
