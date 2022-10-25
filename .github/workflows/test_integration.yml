@@ -9,8 +9,11 @@ env:
 
 jobs:
   integration:
+    concurrency:
+      group: integration
     if: github.actor == github.repository_owner
     strategy:
+      max-parallel: 1
       matrix:
         configuration: [Debug, Release]
         asf_docker_tag: [main, released, latest]
