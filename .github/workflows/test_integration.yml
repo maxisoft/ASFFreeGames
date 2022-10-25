@@ -76,11 +76,13 @@ jobs:
         cmd = r"""docker run -e "ASF_CRYPTKEY=${{ secrets.ASF_CRYPTKEY }}" -v `pwd`/config:/app/config -v `pwd`/plugins:/app/plugins --name asf --pull always justarchi/archisteamfarm:${{ matrix.asf_docker_tag }}"""
 
         with open('out.txt', 'ab+') as out, subprocess.Popen(cmd, shell=True, stdout=out, stderr=out) as process:
-            def flush_out():
+            def flush_out() -> str:
               out.flush()
               out.seek(0)
               output = out.read()
-              print(output.decode())
+              output = output.decode()
+              print(output)
+              return output
 
             exit_code = None
             try:
@@ -91,8 +93,8 @@ jobs:
                 exit_code = process.wait(timeout=10)
                 if exit_code is None:
                     process.terminate()
-                flush_out()
-                assert b'CollectGames() [FreeGames] found' in output, "unable to start docker with ASFFreeGames installed"
+                output = flush_out()
+                assert 'CollectGames() [FreeGames] found' in output, "unable to start docker with ASFFreeGames installed"
                 sys.exit(0)
 
             print(f'Process stopped earlier than expected with {exit_code} code', file=sys.stderr)
