@@ -49,7 +49,7 @@ public class LoggerFilter {
 				logger.Factory.ReconfigExistingLoggers();
 			}
 
-			return new LoggerRemoveFilterDisposable(bot, node, Filters);
+			return new LoggerRemoveFilterDisposable(node);
 		}
 	}
 
@@ -76,21 +76,11 @@ public class LoggerFilter {
 	}
 
 	private sealed class LoggerRemoveFilterDisposable : IDisposable {
-		private readonly Bot Bot;
-		private readonly ConditionalWeakTable<Bot, LinkedList<Func<LogEventInfo, bool>>> Filters;
 		private readonly LinkedListNode<Func<LogEventInfo, bool>> Node;
 
-		public LoggerRemoveFilterDisposable(Bot bot, LinkedListNode<Func<LogEventInfo, bool>> node, ConditionalWeakTable<Bot, LinkedList<Func<LogEventInfo, bool>>> filters) {
-			Bot = bot;
-			Node = node;
-			Filters = filters;
-		}
+		public LoggerRemoveFilterDisposable(LinkedListNode<Func<LogEventInfo, bool>> node) => Node = node;
 
-		public void Dispose() {
-			if (Filters.TryGetValue(Bot, out LinkedList<Func<LogEventInfo, bool>>? list)) {
-				list?.Remove(Node);
-			}
-		}
+		public void Dispose() => Node.List?.Remove(Node);
 	}
 
 	private class MarkedWhenMethodFilter : WhenMethodFilter {
