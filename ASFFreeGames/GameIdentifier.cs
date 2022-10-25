@@ -69,11 +69,8 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 			type = type[..3];
 		}
 
-		Span<char> typeUpper = stackalloc char[4];
-		typeUpper = typeUpper[..type.ToUpperInvariant(typeUpper)];
-
-		if (typeUpper.Length == 1) {
-			identifierType = typeUpper[0] switch {
+		if (type.Length == 1) {
+			identifierType = char.ToUpperInvariant(type[0]) switch {
 				'A' => GameIdentifierType.App,
 				'S' => GameIdentifierType.Sub,
 				_ => identifierType
@@ -81,7 +78,7 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 		}
 
 		if (identifierType is GameIdentifierType.None) {
-			switch (typeUpper.ToString()) {
+			switch (type.ToString().ToUpperInvariant()) {
 				case "A":
 				case "APP":
 					identifierType = GameIdentifierType.App;
