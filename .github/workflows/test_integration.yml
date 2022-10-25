@@ -24,7 +24,7 @@ jobs:
     strategy:
       max-parallel: 1 # only 1 else asf may crash due to parallel login using the same config file
       matrix:
-        configuration: [Debug, Release]
+        configuration: [Release]
         asf_docker_tag: [main, released, latest]
 
     runs-on: ubuntu-latest
