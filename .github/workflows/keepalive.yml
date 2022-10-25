@@ -1,0 +1,19 @@
+name: Keep the repo alive
+on:
+  schedule:
+    - cron: "22 12 */3 * *"
+  push:
+  fork:
+  status:
+  issues:
+
+jobs:
+  keep-alive:
+    name: Keep the repo alive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: gautamkrishnar/keepalive-workflow@v1
+        with:
+          committer_username: ${{ github.repository_owner }}
+          committer_email: ${{ github.repository_owner }}@users.noreply.github.com
