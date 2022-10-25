@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: "22 12 */3 * *"
   push:
+  pull_request:
   fork:
   status:
   issues:
