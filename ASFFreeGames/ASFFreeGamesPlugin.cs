@@ -38,7 +38,18 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private readonly HashSet<GameIdentifier> PreviouslySeenAppIds = new();
 	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage, EPurchaseResultDetail.DoesNotOwnRequiredApp };
 	private static readonly Lazy<Regex> InvalidAppPurchaseRegex = new(BuildInvalidAppPurchaseRegex);
-	private readonly LoggerFilter LoggerFilter = new LoggerFilter();
+	private readonly LoggerFilter LoggerFilter = new();
+
+	// ReSharper disable once RedundantDefaultMemberInitializer
+#pragma warning disable CA1805
+	internal bool VerboseLog { get; private set; } =
+#if DEBUG
+		true
+#else
+		false
+#endif
+		;
+#pragma warning restore CA1805
 
 	private Timer? Timer;
 
@@ -49,7 +60,10 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	}
 
 	public Task OnLoaded() {
-		//ArchiLogger.LogGenericInfo($"Loaded {Name}", nameof(OnLoaded));
+		if (VerboseLog) {
+			ArchiLogger.LogGenericInfo($"Loaded {Name}", nameof(OnLoaded));
+		}
+
 		return Task.CompletedTask;
 	}
 
@@ -79,6 +93,21 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		if (args is { Length: > 0 } && (args[0]?.ToUpperInvariant() == "FREEGAMES")) {
+			if ((args.Length > 2) && (args[1].ToUpperInvariant() == "SET")) {
+				switch (args[2].ToUpperInvariant()) {
+					case "VERBOSE":
+						VerboseLog = true;
+
+						return formatBotResponse("Verbosity on");
+					case "NOVERBOSE":
+						VerboseLog = false;
+
+						return formatBotResponse("Verbosity off");
+					default:
+						return formatBotResponse($"Unknown \"{args[2]}\" variable to set");
+				}
+			}
+
 			int collected = await CollectGames(CollectGameRequestSource.RequestedByUser, CancellationTS.Value.Token).ConfigureAwait(false);
 
 			return formatBotResponse($"Collected a total of {collected} free game(s)");
@@ -87,7 +116,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		return null;
 	}
 
-	public Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) => Task.CompletedTask;
+	public Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
+		VerboseLog = GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose")?.ToObject<bool>() ?? VerboseLog;
+
+		return Task.CompletedTask;
+	}
 
 	public async Task OnBotDestroy(Bot bot) => await RemoveBot(bot).ConfigureAwait(false);
 
@@ -111,6 +144,8 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		if ((Bots.Count == 0)) {
 			ResetTimer();
 		}
+
+		LoggerFilter.RemoveFilters(bot);
 	}
 
 	private async Task RegisterBot(Bot bot) {
@@ -166,7 +201,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		try {
 			ICollection<RedditGameEntry> games = await RedditHelper.ListGames().ConfigureAwait(false);
 
-			LogNewGameCount(games, requestSource is CollectGameRequestSource.RequestedByUser);
+			LogNewGameCount(games, VerboseLog || requestSource is CollectGameRequestSource.RequestedByUser);
 
 			foreach (Bot bot in bots) {
 				if (cancellationToken.IsCancellationRequested) {
@@ -199,8 +234,14 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 					string? resp;
 
-					using (LoggerFilter.DisableLoggingForAddLicenseCommonErrors(_ => (requestSource is not CollectGameRequestSource.RequestedByUser) && context.ShouldHideErrorLogForApp(in gid), bot)) {
-						resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {gid}").ConfigureAwait(false);
+					string cmd = $"ADDLICENSE {bot.BotName} {gid}";
+
+					if (VerboseLog) {
+						bot.ArchiLogger.LogGenericDebug($"Trying to perform command \"{cmd}\"", nameof(CollectGames));
+					}
+
+					using (LoggerFilter.DisableLoggingForAddLicenseCommonErrors(_ => !VerboseLog && (requestSource is not CollectGameRequestSource.RequestedByUser) && context.ShouldHideErrorLogForApp(in gid), bot)) {
+						resp = await bot.Commands.Response(EAccess.Operator, cmd).ConfigureAwait(false);
 					}
 
 					bool success = false;
@@ -209,7 +250,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
 						success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
 
-						if (success || requestSource is CollectGameRequestSource.RequestedByUser || !context.ShouldHideErrorLogForApp(in gid)) {
+						if (success || VerboseLog || requestSource is CollectGameRequestSource.RequestedByUser || !context.ShouldHideErrorLogForApp(in gid)) {
 							bot.ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
 						}
 					}
