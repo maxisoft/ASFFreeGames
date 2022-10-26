@@ -42,6 +42,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 	private Timer? Timer;
 
+	private enum CollectGameRequestSource {
+		None = 0,
+		RequestedByUser = 1,
+		Scheduled = 2,
+	}
+
 	public Task OnLoaded() {
 		//ArchiLogger.LogGenericInfo($"Loaded {Name}", nameof(OnLoaded));
 		return Task.CompletedTask;
@@ -73,7 +79,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		if (args is { Length: > 0 } && (args[0]?.ToUpperInvariant() == "FREEGAMES")) {
-			int collected = await CollectGames(CancellationTS.Value.Token).ConfigureAwait(false);
+			int collected = await CollectGames(CollectGameRequestSource.RequestedByUser, CancellationTS.Value.Token).ConfigureAwait(false);
 
 			return formatBotResponse($"Collected a total of {collected} free game(s)");
 		}
@@ -141,12 +147,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			Array.Sort(reorderedBots, comparison);
 		}
 
-		await CollectGames(reorderedBots, cts.Token).ConfigureAwait(false);
+		await CollectGames(reorderedBots, CollectGameRequestSource.Scheduled, cts.Token).ConfigureAwait(false);
 	}
 
-	private Task<int> CollectGames(CancellationToken cancellationToken = default) => CollectGames(Bots, cancellationToken);
+	private Task<int> CollectGames(CollectGameRequestSource requestSource, CancellationToken cancellationToken = default) => CollectGames(Bots, requestSource, cancellationToken);
 
-	private async Task<int> CollectGames(IEnumerable<Bot> bots, CancellationToken cancellationToken = default) {
+	private async Task<int> CollectGames(IEnumerable<Bot> bots, CollectGameRequestSource requestSource, CancellationToken cancellationToken = default) {
 		if (cancellationToken.IsCancellationRequested) {
 			return 0;
 		}
@@ -160,7 +166,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		try {
 			ICollection<RedditGameEntry> games = await RedditHelper.ListGames().ConfigureAwait(false);
 
-			LogNewGameCount(games);
+			LogNewGameCount(games, requestSource is CollectGameRequestSource.RequestedByUser);
 
 			foreach (Bot bot in bots) {
 				if (cancellationToken.IsCancellationRequested) {
@@ -193,7 +199,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 					string? resp;
 
-					using (LoggerFilter.DisableLoggingForAddKeyCommonErrors(_ => context.ShouldHideErrorLogForApp(in gid), bot)) {
+					using (LoggerFilter.DisableLoggingForAddLicenseCommonErrors(_ => (requestSource is not CollectGameRequestSource.RequestedByUser) && context.ShouldHideErrorLogForApp(in gid), bot)) {
 						resp = await bot.Commands.Response(EAccess.Operator, $"ADDLICENSE {bot.BotName} {gid}").ConfigureAwait(false);
 					}
 
@@ -203,7 +209,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
 						success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
 
-						if (success || !context.ShouldHideErrorLogForApp(in gid)) {
+						if (success || requestSource is CollectGameRequestSource.RequestedByUser || !context.ShouldHideErrorLogForApp(in gid)) {
 							bot.ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
 						}
 					}
@@ -244,7 +250,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		return res;
 	}
 
-	private void LogNewGameCount(ICollection<RedditGameEntry> games) {
+	private void LogNewGameCount(ICollection<RedditGameEntry> games, bool logZero = false) {
 		int totalAppIdCounter = PreviouslySeenAppIds.Count;
 		int newGameCounter = 0;
 
@@ -259,6 +265,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 		else if (newGameCounter > 0) {
 			ArchiLogger.LogGenericInfo($"[FreeGames] found {newGameCounter} fresh free game(s) on reddit", nameof(CollectGames));
+		}
+		else if ((newGameCounter == 0) && logZero) {
+			ArchiLogger.LogGenericInfo($"[FreeGames] found 0 new game out of {games.Count} free games on reddit", nameof(CollectGames));
 		}
 	}
 
