@@ -15,7 +15,7 @@ namespace Maxisoft.ASF;
 #nullable enable
 
 public class LoggerFilter {
-	private static readonly Lazy<Regex> AddKeyCommonErrorsRegex = new(new Regex(@".*InternalRequest\s*\(\w*?\)\s*(?:(?:InternalServerError)|(?:Forbidden)).*$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+	private static readonly Lazy<Regex> AddKeyCommonErrorsRegex = new(static () => new Regex(@".*InternalRequest\s*\(\w*?\)\s*(?:(?:InternalServerError)|(?:Forbidden)).*$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
 
 	private readonly ConditionalWeakTable<Bot, LinkedList<Func<LogEventInfo, bool>>> Filters = new();
 	private readonly MarkedWhenMethodFilter MethodFilter;
@@ -40,7 +40,7 @@ public class LoggerFilter {
 
 			bool reconfig = false;
 
-			foreach (LoggingRule loggingRule in config.LoggingRules.Where(loggingRule => !loggingRule.Filters.Contains(MethodFilter))) {
+			foreach (LoggingRule loggingRule in config.LoggingRules.Where(loggingRule => !loggingRule.Filters.Any(f => ReferenceEquals(f, MethodFilter)))) {
 				loggingRule.Filters.Insert(0, MethodFilter);
 				reconfig = true;
 			}
