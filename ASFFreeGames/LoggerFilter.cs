@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace Maxisoft.ASF;
 public class LoggerFilter {
 	private static readonly Lazy<Regex> AddLicenceCommonErrorsRegex = new(static () => new Regex(@".*InternalRequest\s*\(\w*?\)\s*(?:(?:InternalServerError)|(?:Forbidden)).*$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
 
-	private readonly ConditionalWeakTable<Bot, LinkedList<Func<LogEventInfo, bool>>> Filters = new();
+	private readonly ConcurrentDictionary<string, LinkedList<Func<LogEventInfo, bool>>> Filters = new();
 	private readonly MarkedWhenMethodFilter MethodFilter;
 
 	public LoggerFilter() => MethodFilter = new MarkedWhenMethodFilter(FilterLogEvent);
@@ -28,11 +29,14 @@ public class LoggerFilter {
 		LinkedList<Func<LogEventInfo, bool>>? filters;
 
 		lock (Filters) {
-			Filters.TryGetValue(bot, out filters);
+			Filters.TryGetValue(bot.BotName, out filters);
 
 			if (filters is null) {
 				filters = new LinkedList<Func<LogEventInfo, bool>>();
-				Filters.Add(bot, filters);
+
+				if (!Filters.TryAdd(bot.BotName, filters)) {
+					filters = Filters[bot.BotName];
+				}
 			}
 
 			LinkedListNode<Func<LogEventInfo, bool>> node = filters.AddLast(filter);
@@ -62,11 +66,11 @@ public class LoggerFilter {
 	private FilterResult FilterLogEvent(LogEventInfo eventInfo) {
 		Bot? bot = eventInfo.LoggerName == "ASF" ? null : Bot.GetBot(eventInfo.LoggerName ?? "");
 
-		if (bot is not null && Filters.TryGetValue(bot, out LinkedList<Func<LogEventInfo, bool>>? filters)) {
-			return filters.Any(func => func(eventInfo)) ? FilterResult.IgnoreFinal : FilterResult.Neutral;
+		if (Filters.TryGetValue(bot?.BotName ?? eventInfo.LoggerName ?? "", out LinkedList<Func<LogEventInfo, bool>>? filters)) {
+			return filters.Any(func => func(eventInfo)) ? FilterResult.IgnoreFinal : FilterResult.Log;
 		}
 
-		return FilterResult.Neutral;
+		return FilterResult.Log;
 	}
 
 	private static Logger GetLogger(ArchiLogger logger, string name = "ASF") {
@@ -86,4 +90,7 @@ public class LoggerFilter {
 	private class MarkedWhenMethodFilter : WhenMethodFilter {
 		public MarkedWhenMethodFilter(Func<LogEventInfo, FilterResult> filterMethod) : base(filterMethod) { }
 	}
+
+	private bool RemoveFilters(string botName) => Filters.TryRemove(botName, out _);
+	public bool RemoveFilters(Bot? bot) => bot is not null && RemoveFilters(bot.BotName);
 }
