@@ -264,6 +264,14 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						res++;
 					}
 					else {
+						if ((requestSource != CollectGameRequestSource.RequestedByUser) && (resp?.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase) ?? false)) {
+							if (VerboseLog) {
+								bot.ArchiLogger.LogGenericWarning("[FreeGames] Rate limit reached skipping remaining games...", nameof(CollectGames));
+							}
+
+							break;
+						}
+
 						if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
 							lock (context) {
 								context.AppTickCount(in gid, increment: true);
