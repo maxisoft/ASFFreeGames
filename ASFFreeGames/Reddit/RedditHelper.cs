@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Web.Responses;
@@ -27,14 +28,14 @@ internal sealed class RedditHelper {
 
 	private const int PoolMaxGameEntry = 1024;
 	private static readonly ArrayPool<RedditGameEntry> ArrayPool = ArrayPool<RedditGameEntry>.Create(PoolMaxGameEntry, 1);
+
 	private const int BloomFilterBufferSize = 8;
-	private static readonly Lazy<float> BloomFilterK = new(static () => StringBloomFilterSpan.SolveK(BloomFilterBufferSize * BitSpan.LongNumBit, 1e-2));
 
 	private RedditGameEntry[] LoadMessages(JToken children) {
 		Regex regex = CommandRegex.Value;
 		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
-		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, BloomFilterK.Value);
+		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
 
 		try {
 			SpanList<RedditGameEntry> list = new(buffer);
@@ -43,37 +44,44 @@ internal sealed class RedditHelper {
 				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
 				var text = commentData?.Value<string>("body") ?? string.Empty;
 				var date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
-				var match = regex.Match(text);
+				var matches = regex.Matches(text);
 
-				if (!match.Success) {
-					continue;
-				}
+				foreach (Match match in matches) {
+					bool freeToPlay = match.Groups["free"].Success;
+					RedditGameEntry gameEntry;
 
-				bool freeToPlay = match.Groups["free"].Success;
-				RedditGameEntry gameEntry;
-
-				foreach (Group matchGroup in match.Groups) {
-					if (matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
-						gameEntry = new RedditGameEntry(matchGroup.Value, freeToPlay, date);
-
-						if (bloomFilter.Contains(gameEntry.Identifier)) {
-							// remove potential duplicates
-							list.Remove(in gameEntry);
+					foreach (Group matchGroup in match.Groups) {
+						if (!matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
+							continue;
 						}
 
-						list.Add(in gameEntry);
-						bloomFilter.Add(gameEntry.Identifier);
+						foreach (Capture capture in matchGroup.Captures) {
+							gameEntry = new RedditGameEntry(capture.Value, freeToPlay, date);
 
-						while (list.Count >= list.Capacity) {
-							// should not append but better safe than sorry
-							list.RemoveAt(0);
+							int index = -1;
+
+							if (bloomFilter.Contains(gameEntry.Identifier)) {
+								index = list.IndexOf(gameEntry, new GameEntryIdentifierEqualityComparer());
+							}
+
+							if (index >= 0) {
+								list[index] = gameEntry;
+							}
+							else {
+								list.Add(in gameEntry);
+								bloomFilter.Add(gameEntry.Identifier);
+							}
+
+							while (list.Count >= list.Capacity) {
+								// should not append but better safe than sorry
+								list.RemoveAt(list.Count - 1);
+							}
 						}
 					}
 				}
 			}
 
 			RedditGameEntry[] res = list.ToArray();
-			Array.Sort(res, new RedditGameEntryComparerOnDate());
 
 			return res;
 		}
