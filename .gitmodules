@@ -5,7 +5,3 @@
 [submodule "BloomFilter"]
 	path = BloomFilter
 	url = https://gist.github.com/8c74d66798a21e05a35b0023573f48e9.git
-[submodule "Maxisoft.Utils"]
-	path = Maxisoft.Utils
-	url = https://github.com/maxisoft/Maxisoft.Utils.git
-	branch = Span
