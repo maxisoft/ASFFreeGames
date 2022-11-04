@@ -16,7 +16,7 @@ namespace Maxisoft.ASF;
 #nullable enable
 
 public class LoggerFilter {
-	private static readonly Lazy<Regex> AddLicenceCommonErrorsRegex = new(static () => new Regex(@".*InternalRequest\s*\(\w*?\)\s*(?:(?:InternalServerError)|(?:Forbidden)).*$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+	private static readonly Lazy<Regex> AddLicenceCommonErrorsRegex = new(static () => new Regex(@"^.*?InternalRequest(?>\s*)\(\w*?\)(?>\s*)(?:(?:InternalServerError)|(?:Forbidden)).*?$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
 
 	private readonly ConcurrentDictionary<string, LinkedList<Func<LogEventInfo, bool>>> Filters = new();
 	private readonly MarkedWhenMethodFilter MethodFilter;
@@ -58,7 +58,7 @@ public class LoggerFilter {
 	}
 
 	public IDisposable DisableLoggingForAddLicenseCommonErrors(Func<LogEventInfo, bool> filter, [NotNull] Bot bot) {
-		bool filter2(LogEventInfo info) => (info.Level == LogLevel.Debug) && AddLicenceCommonErrorsRegex.Value.IsMatch(info.Message) && filter(info);
+		bool filter2(LogEventInfo info) => (info.Level == LogLevel.Debug) && filter(info) && AddLicenceCommonErrorsRegex.Value.IsMatch(info.Message);
 
 		return DisableLogging(filter2, bot);
 	}

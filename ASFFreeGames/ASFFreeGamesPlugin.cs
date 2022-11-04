@@ -313,11 +313,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	}
 
 	private static Regex BuildInvalidAppPurchaseRegex() {
-		StringBuilder stringBuilder = new("^.*(?:");
+		StringBuilder stringBuilder = new("^.*?(?:");
 
 		foreach (EPurchaseResultDetail code in InvalidAppPurchaseCodes) {
 			stringBuilder.Append("(?:");
-			ReadOnlySpan<char> codeString = code.ToString().Replace(nameof(EPurchaseResultDetail), @"\w*", StringComparison.InvariantCultureIgnoreCase);
+			ReadOnlySpan<char> codeString = code.ToString().Replace(nameof(EPurchaseResultDetail), @"\w*?", StringComparison.InvariantCultureIgnoreCase);
 
 			while ((codeString.Length > 0) && (codeString[0] == '.')) {
 				codeString = codeString[1..];
@@ -331,7 +331,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			foreach (char c in codeString[1..]) {
 				if (char.IsUpper(c)) {
-					stringBuilder.Append(@"\s*");
+					stringBuilder.Append(@"(?>\s*)");
 				}
 
 				stringBuilder.Append(c);
@@ -344,7 +344,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			stringBuilder.Length -= 1;
 		}
 
-		stringBuilder.Append(").*$");
+		stringBuilder.Append(").*?$");
 
 		return new Regex(stringBuilder.ToString(), RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 	}
