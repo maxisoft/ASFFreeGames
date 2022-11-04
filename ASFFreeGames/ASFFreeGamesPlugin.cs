@@ -266,7 +266,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 					else {
 						if ((requestSource != CollectGameRequestSource.RequestedByUser) && (resp?.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase) ?? false)) {
 							if (VerboseLog) {
-								bot.ArchiLogger.LogGenericWarning("[FreeGames] Rate limit reached skipping remaining games...", nameof(CollectGames));
+								bot.ArchiLogger.LogGenericWarning("[FreeGames] Rate limit reached ! Skipping remaining games...", nameof(CollectGames));
 							}
 
 							break;
