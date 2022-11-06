@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFFD}") = "ASFFreeGames", "ASFFreeGame
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFFD}") = "ArchiSteamFarm", "ArchiSteamFarm\ArchiSteamFarm\ArchiSteamFarm.csproj", "{50744701-4C54-49BE-8189-518DA2A65797}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASFFreeGames.Tests", "ASFFreeGames.Tests\ASFFreeGames.Tests.csproj", "{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,5 +31,11 @@ Global
 		{50744701-4C54-49BE-8189-518DA2A65797}.DebugFast|Any CPU.Build.0 = DebugFast|Any CPU
 		{50744701-4C54-49BE-8189-518DA2A65797}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50744701-4C54-49BE-8189-518DA2A65797}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.DebugFast|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.DebugFast|Any CPU.Build.0 = Debug|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC4DC8D7-AF9D-464D-BC93-DD829B3D1837}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

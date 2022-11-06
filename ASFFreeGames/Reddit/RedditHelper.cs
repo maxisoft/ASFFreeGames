@@ -31,7 +31,7 @@ internal sealed class RedditHelper {
 
 	private const int BloomFilterBufferSize = 8;
 
-	private RedditGameEntry[] LoadMessages(JToken children) {
+	internal RedditGameEntry[] LoadMessages(JToken children) {
 		Regex regex = CommandRegex.Value;
 		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
@@ -92,7 +92,7 @@ internal sealed class RedditHelper {
 
 	public async ValueTask<ICollection<RedditGameEntry>> ListGames() {
 		var webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
-		var res = new List<RedditGameEntry>();
+		var res = Array.Empty<RedditGameEntry>();
 
 		if (webBrowser is null) {
 			return res;

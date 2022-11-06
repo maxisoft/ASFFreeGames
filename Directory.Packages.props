@@ -2,5 +2,9 @@
 	<Import Project="ArchiSteamFarm/Directory.Packages.props"/>
 	<ItemGroup>
 		<PackageVersion Include="NLog" Version="4.7.11"/>
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
+        <PackageVersion Include="xunit" Version="2.4.2"/>
+        <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.5"/>
+		<PackageVersion Include="coverlet.collector" Version="3.2.0"/>
 	</ItemGroup>
 </Project>
