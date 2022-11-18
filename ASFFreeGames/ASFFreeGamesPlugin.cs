@@ -24,7 +24,7 @@ namespace Maxisoft.ASF;
 
 #pragma warning disable CA1812 // ASF uses this class during runtime
 [UsedImplicitly]
-internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2 {
+internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IDisposable {
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 	private const int DayInSeconds = 24 * 60 * 60;
 	public string Name => nameof(ASFFreeGamesPlugin);
@@ -355,6 +355,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		stringBuilder.Append(").*?$");
 
 		return new Regex(stringBuilder.ToString(), RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+	}
+
+	public void Dispose() {
+		SemaphoreSlim.Dispose();
+		Timer?.Dispose();
 	}
 }
 #pragma warning restore CA1812 // ASF uses this class during runtime

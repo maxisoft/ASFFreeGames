@@ -74,33 +74,6 @@ namespace Maxisoft.Utils.Collections.Spans {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static BitSpan operator &(BitSpan left, BitSpan right) {
-			var buff = new long[Math.Max(left.Span.Length, right.Span.Length)];
-			var res = CreateFromBuffer<long>(buff);
-			left.Span.CopyTo(res);
-
-			return res.And(right);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static BitSpan operator |(BitSpan left, BitSpan right) {
-			var buff = new long[Math.Max(left.Span.Length, right.Span.Length)];
-			var res = CreateFromBuffer<long>(buff);
-			left.Span.CopyTo(res);
-
-			return res.Or(right);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static BitSpan operator ^(BitSpan left, BitSpan right) {
-			var buff = new long[Math.Max(left.Span.Length, right.Span.Length)];
-			var res = CreateFromBuffer<long>(buff);
-			left.Span.CopyTo(res);
-
-			return res.Xor(right);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static BitSpan operator ~(BitSpan bs) {
 			var buff = new long[bs.Count];
 			var res = CreateFromBuffer<long>(buff);
