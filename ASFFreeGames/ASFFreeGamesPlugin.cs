@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -24,7 +25,8 @@ namespace Maxisoft.ASF;
 
 #pragma warning disable CA1812 // ASF uses this class during runtime
 [UsedImplicitly]
-internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IDisposable {
+[SuppressMessage("Design", "CA1001:Disposable fields")]
+internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2 {
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 	private const int DayInSeconds = 24 * 60 * 60;
 	public string Name => nameof(ASFFreeGamesPlugin);
@@ -33,7 +35,8 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private readonly ConcurrentHashSet<Bot> Bots = new(new BotEqualityComparer());
 	private readonly ConcurrentDictionary<string, BotContext> BotContexts = new();
 	private readonly RedditHelper RedditHelper = new();
-	private readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
+	private SemaphoreSlim? SemaphoreSlim;
+	private readonly object LockObject = new();
 	private readonly Lazy<CancellationTokenSource> CancellationTS = new(static () => new CancellationTokenSource());
 	private readonly HashSet<GameIdentifier> PreviouslySeenAppIds = new();
 	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage, EPurchaseResultDetail.DoesNotOwnRequiredApp };
@@ -192,7 +195,16 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			return 0;
 		}
 
-		if (!await SemaphoreSlim.WaitAsync(100, cancellationToken).ConfigureAwait(false)) {
+		SemaphoreSlim? semaphore = SemaphoreSlim;
+
+		if (semaphore is null) {
+			lock (LockObject) {
+				SemaphoreSlim ??= new SemaphoreSlim(1, 1);
+				semaphore = SemaphoreSlim;
+			}
+		}
+
+		if (!await semaphore.WaitAsync(100, cancellationToken).ConfigureAwait(false)) {
 			return 0;
 		}
 
@@ -293,7 +305,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 		catch (TaskCanceledException) { }
 		finally {
-			SemaphoreSlim.Release();
+			semaphore.Release();
 		}
 
 		return res;
@@ -357,9 +369,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		return new Regex(stringBuilder.ToString(), RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 	}
 
-	public void Dispose() {
-		SemaphoreSlim.Dispose();
+	~ASFFreeGamesPlugin() {
+		SemaphoreSlim?.Dispose();
+		SemaphoreSlim = null;
 		Timer?.Dispose();
+		Timer = null;
 	}
 }
 #pragma warning restore CA1812 // ASF uses this class during runtime
