@@ -13,18 +13,20 @@ internal sealed class BotContext : IDisposable {
 	private const ulong TriesBeforeBlacklistingGameEntry = 5;
 
 	private readonly Dictionary<GameIdentifier, (ulong counter, DateTime date)> AppRegistrationContexts = new();
-	private readonly WeakReference<Bot> Bot;
+	private readonly string BotIdentifier;
 	private readonly TimeSpan BlacklistTimeout = TimeSpan.FromDays(1);
 	private readonly CompletedAppList CompletedApps = new();
 	private long LastRunMilli;
 
 	public BotContext(Bot bot) {
-		Bot = new WeakReference<Bot>(bot);
+		BotIdentifier = bot.BotName;
 		NewRun();
 	}
 
 	private string CompletedAppFilePath() {
-		if (!Bot.TryGetTarget(out var bot)) {
+		Bot? bot = Bot.GetBot(BotIdentifier);
+
+		if (bot is null) {
 			return string.Empty;
 		}
 
@@ -65,11 +67,9 @@ internal sealed class BotContext : IDisposable {
 			return true;
 		}
 
-		if (!Bot.TryGetTarget(out var bot)) {
-			return false;
-		}
+		Bot? bot = Bot.GetBot(BotIdentifier);
 
-		return bot.OwnedPackageIDs.ContainsKey(checked((uint) gameIdentifier.Id));
+		return bot is not null && bot.OwnedPackageIDs.ContainsKey(checked((uint) gameIdentifier.Id));
 	}
 
 	public bool ShouldHideErrorLogForApp(in GameIdentifier gameIdentifier) => (AppTickCount(in gameIdentifier) > 0) || CompletedApps.ContainsInvalid(in gameIdentifier);
