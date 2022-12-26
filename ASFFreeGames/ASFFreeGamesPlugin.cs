@@ -231,7 +231,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 				bool save = false;
 				BotContext context = BotContexts[bot.BotName];
 
-				foreach ((string? identifier, bool freeToPlay, long time) in games) {
+				foreach ((string? identifier, long time, bool freeToPlay, bool dlc) in games) {
 					if (freeToPlay) {
 						continue;
 					}

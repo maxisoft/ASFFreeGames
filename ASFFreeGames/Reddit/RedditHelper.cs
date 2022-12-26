@@ -24,8 +24,13 @@ internal sealed class RedditHelper {
 		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
 	);
 
-	private readonly Regex IsFreeRegex = new Regex(
+	private readonly Regex IsPermanentlyFreeRegex = new Regex(
 		@"permanently\s+free",
+		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
+	);
+
+	private readonly Regex IsDlcRegex = new Regex(
+		@"free\s+DLC\s+for\s+a",
 		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
 	);
 
@@ -49,7 +54,15 @@ internal sealed class RedditHelper {
 				MatchCollection matches = CommandRegex.Matches(text);
 
 				foreach (Match match in matches) {
-					bool freeToPlay = IsFreeRegex.IsMatch(text);
+					ERedditGameEntryKind kind = ERedditGameEntryKind.None;
+
+					if (IsPermanentlyFreeRegex.IsMatch(text)) {
+						kind |= ERedditGameEntryKind.FreeToPlay;
+					}
+
+					if (IsDlcRegex.IsMatch(text)) {
+						kind = ERedditGameEntryKind.Dlc;
+					}
 
 					foreach (Group matchGroup in match.Groups) {
 						if (!matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
@@ -57,7 +70,7 @@ internal sealed class RedditHelper {
 						}
 
 						foreach (Capture capture in matchGroup.Captures) {
-							RedditGameEntry gameEntry = new(capture.Value, freeToPlay, date);
+							RedditGameEntry gameEntry = new(capture.Value, kind, date);
 
 							int index = -1;
 
