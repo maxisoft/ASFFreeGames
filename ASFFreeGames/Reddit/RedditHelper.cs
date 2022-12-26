@@ -19,11 +19,14 @@ internal sealed class RedditHelper {
 
 	private static Uri GetUrl() => new Uri($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
-	private readonly Lazy<Regex> CommandRegex = new Lazy<Regex>(
-		static () => new Regex(
-			@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+.*?(?<free>permanently\s+free)?",
-			RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
-		)
+	private readonly Regex CommandRegex = new Regex(
+		@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+",
+		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
+	);
+
+	private readonly Regex IsFreeRegex = new Regex(
+		@"permanently\s+free",
+		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
 	);
 
 	private const int PoolMaxGameEntry = 1024;
@@ -32,7 +35,7 @@ internal sealed class RedditHelper {
 	private const int BloomFilterBufferSize = 8;
 
 	internal RedditGameEntry[] LoadMessages(JToken children) {
-		Regex regex = CommandRegex.Value;
+		var regex = CommandRegex;
 		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
 		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
@@ -47,7 +50,7 @@ internal sealed class RedditHelper {
 				var matches = regex.Matches(text);
 
 				foreach (Match match in matches) {
-					bool freeToPlay = match.Groups["free"].Success;
+					bool freeToPlay = IsFreeRegex.IsMatch(text);
 					RedditGameEntry gameEntry;
 
 					foreach (Group matchGroup in match.Groups) {
