@@ -42,6 +42,34 @@ public sealed class RedditHelperTests {
 		Assert.Equal(entries.Length - 1, app1631250);
 	}
 
+	[Fact]
+	public void TestFreeToPlayParsing() {
+		JToken payload = ASFinfo.Value;
+		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
+		Assert.True(f2pEntry.FreeToPlay);
+
+		RedditGameEntry getEntry(string identifier) => Array.Find(entries, entry => entry.Identifier == identifier);
+
+		f2pEntry = getEntry("a/431650"); // F2P
+		Assert.True(f2pEntry.FreeToPlay);
+
+		f2pEntry = getEntry("a/579730");
+		Assert.True(f2pEntry.FreeToPlay);
+
+		RedditGameEntry dlcEntry = getEntry("s/791643"); // DLC
+		Assert.False(dlcEntry.FreeToPlay);
+
+		dlcEntry = getEntry("s/791642");
+		Assert.False(dlcEntry.FreeToPlay);
+
+		RedditGameEntry paidEntry = getEntry("s/762440"); // Warhammer: Vermintide 2
+		Assert.False(paidEntry.FreeToPlay);
+
+		paidEntry = getEntry("a/1601550");
+		Assert.False(paidEntry.FreeToPlay);
+	}
+
 	private static JToken LoadAsfinfoJson() {
 		Assembly assembly = Assembly.GetExecutingAssembly();
 
