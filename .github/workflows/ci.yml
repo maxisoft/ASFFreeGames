@@ -35,4 +35,4 @@ jobs:
       run: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo
 
     - name: Test ${{ matrix.configuration }}
-      run: dotnet test --no-build --verbosity normal -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo --framework=net6.0
+      run: dotnet test --no-build --verbosity normal -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo --framework=net7.0
