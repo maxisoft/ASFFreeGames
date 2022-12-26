@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   schedule:
     - cron: '55 22 */3 * *'
 
