@@ -9,13 +9,13 @@ ASF-FreeGames is a **[plugin](https://github.com/JustArchiNET/ArchiSteamFarm/wik
 
 ## Requirements
 
-- a working ✅ [ArchiSteamFarm](https://github.com/JustArchiNET/ArchiSteamFarm) environment
+- ✅ a working [ArchiSteamFarm](https://github.com/JustArchiNET/ArchiSteamFarm) environment
 
 ## Installation
-- Download 🔽 latest [Dll](https://github.com/maxisoft/ASFFreeGames/releases) from the release page
-- Move ➡️ the **dll** into the `plugins` folder of your *ArchiSteamFarm* installation
-- (re)start 🔄 ArchiSteamFarm
-- Have fun 🎉
+- 🔽 Download latest [Dll](https://github.com/maxisoft/ASFFreeGames/releases) from the release page
+- ➡️ Move the **dll** into the `plugins` folder of your *ArchiSteamFarm* installation
+- 🔄 (re)start  ArchiSteamFarm
+- 🎉 Have fun
 
 ## How does it works
 Every ⏰`30 minutes` the plugins starts 🔬analysing [reddit](https://www.reddit.com/user/ASFinfo?sort=new) for new **free games**⚾.  
@@ -42,7 +42,7 @@ In addition to the command above, the configuration is stored in a 📖```config
 
 ### Log is full of `Request failed after 5 attempts!` messages is there something wrong ?   
 
-- There's nothing wrong (most likely), those error messages are the result of the plugin trying to add a steam key which is unavailable. With time those error should occurs less frequently (see [#3](https://github.com/maxisoft/ASFFreeGames/issues/3) for more details).
+- There's nothing wrong (most likely), those error messages are the result of the plugin trying to add a steam key which is unavailable. With time those errors should occurs less frequently (see [#3](https://github.com/maxisoft/ASFFreeGames/issues/3) for more details).
 ---
 ## Dev notes
 
