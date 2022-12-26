@@ -35,7 +35,6 @@ internal sealed class RedditHelper {
 	private const int BloomFilterBufferSize = 8;
 
 	internal RedditGameEntry[] LoadMessages(JToken children) {
-		var regex = CommandRegex;
 		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
 		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
@@ -43,15 +42,14 @@ internal sealed class RedditHelper {
 		try {
 			SpanList<RedditGameEntry> list = new(buffer);
 
-			foreach (var comment in children.Children<JObject>()) {
+			foreach (JObject comment in children.Children<JObject>()) {
 				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
-				var text = commentData?.Value<string>("body") ?? string.Empty;
-				var date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
-				var matches = regex.Matches(text);
+				string text = commentData?.Value<string>("body") ?? string.Empty;
+				long date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
+				MatchCollection matches = CommandRegex.Matches(text);
 
 				foreach (Match match in matches) {
 					bool freeToPlay = IsFreeRegex.IsMatch(text);
-					RedditGameEntry gameEntry;
 
 					foreach (Group matchGroup in match.Groups) {
 						if (!matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
@@ -59,7 +57,7 @@ internal sealed class RedditHelper {
 						}
 
 						foreach (Capture capture in matchGroup.Captures) {
-							gameEntry = new RedditGameEntry(capture.Value, freeToPlay, date);
+							RedditGameEntry gameEntry = new(capture.Value, freeToPlay, date);
 
 							int index = -1;
 
@@ -68,7 +66,11 @@ internal sealed class RedditHelper {
 							}
 
 							if (index >= 0) {
-								list[index] = gameEntry;
+								ref RedditGameEntry oldEntry = ref list[index];
+
+								if (gameEntry.Date > oldEntry.Date) {
+									oldEntry = gameEntry;
+								}
 							}
 							else {
 								list.Add(in gameEntry);
