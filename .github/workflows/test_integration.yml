@@ -47,7 +47,12 @@ jobs:
       run: dotnet --info
 
     - name: Build ${{ matrix.configuration }}
-      run: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo
+      uses: nick-fields/retry@v2
+      with:
+        timeout_minutes: 10
+        max_attempts: 10
+        shell: pwsh
+        command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo --framework=${{ env.DOTNET_FRAMEWORK }}
 
     - name: Populate config.zip
       shell: python
