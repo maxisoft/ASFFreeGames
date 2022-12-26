@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ArchiSteamFarm.Web;
 using ArchiSteamFarm.Web.Responses;
 using BloomFilter;
 using JetBrains.Annotations;
@@ -14,25 +15,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Maxisoft.ASF.Reddit;
 
-internal sealed class RedditHelper {
+internal sealed partial class RedditHelper {
 	private const string User = "ASFinfo";
 
 	private static Uri GetUrl() => new Uri($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
-	private readonly Regex CommandRegex = new Regex(
-		@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+",
-		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
-	);
+	[GeneratedRegex(@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex CommandRegex();
 
-	private readonly Regex IsPermanentlyFreeRegex = new Regex(
-		@"permanently\s+free",
-		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
-	);
+	[GeneratedRegex(@"permanently\s+free", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex IsPermanentlyFreeRegex();
 
-	private readonly Regex IsDlcRegex = new Regex(
-		@"free\s+DLC\s+for\s+a",
-		RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
-	);
+
+	[GeneratedRegex(@"free\s+DLC\s+for\s+a", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex IsDlcRegex();
 
 	private const int PoolMaxGameEntry = 1024;
 	private static readonly ArrayPool<RedditGameEntry> ArrayPool = ArrayPool<RedditGameEntry>.Create(PoolMaxGameEntry, 1);
@@ -40,9 +36,9 @@ internal sealed class RedditHelper {
 	private const int BloomFilterBufferSize = 8;
 
 	internal RedditGameEntry[] LoadMessages(JToken children) {
-		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
 		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
+		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 
 		try {
 			SpanList<RedditGameEntry> list = new(buffer);
@@ -51,16 +47,16 @@ internal sealed class RedditHelper {
 				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
 				string text = commentData?.Value<string>("body") ?? string.Empty;
 				long date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
-				MatchCollection matches = CommandRegex.Matches(text);
+				MatchCollection matches = CommandRegex().Matches(text);
 
 				foreach (Match match in matches) {
 					ERedditGameEntryKind kind = ERedditGameEntryKind.None;
 
-					if (IsPermanentlyFreeRegex.IsMatch(text)) {
+					if (IsPermanentlyFreeRegex().IsMatch(text)) {
 						kind |= ERedditGameEntryKind.FreeToPlay;
 					}
 
-					if (IsDlcRegex.IsMatch(text)) {
+					if (IsDlcRegex().IsMatch(text)) {
 						kind = ERedditGameEntryKind.Dlc;
 					}
 
@@ -109,8 +105,8 @@ internal sealed class RedditHelper {
 	}
 
 	public async ValueTask<ICollection<RedditGameEntry>> ListGames() {
-		var webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
-		var res = Array.Empty<RedditGameEntry>();
+		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
+		RedditGameEntry[] res = Array.Empty<RedditGameEntry>();
 
 		if (webBrowser is null) {
 			return res;
@@ -129,14 +125,14 @@ internal sealed class RedditHelper {
 			return res;
 		}
 
-		if ((payload.Content.Value<string>("kind") ?? string.Empty) != "Listing") {
+		if ((payload.Content?.Value<string>("kind") ?? string.Empty) != "Listing") {
 			return res;
 		}
 
-		var data = payload.Content.Value<JObject>("data");
+		JObject? data = payload.Content?.Value<JObject>("data");
 
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalse
-		if (data is null || !data.TryGetValue("children", out var children) || children is null) {
+		if (data is null || !data.TryGetValue("children", out JToken? children) || children is null) {
 			return res;
 		}
 
