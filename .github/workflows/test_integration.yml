@@ -52,7 +52,7 @@ jobs:
         timeout_minutes: 10
         max_attempts: 10
         shell: pwsh
-        command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo --framework=${{ env.DOTNET_FRAMEWORK }}
+        command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo
 
     - name: Populate config.zip
       shell: python
