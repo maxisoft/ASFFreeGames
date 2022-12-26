@@ -25,7 +25,7 @@ public sealed class RedditHelperTests {
 	public void TestContains(string appid) {
 		JToken payload = ASFinfo.Value;
 		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
-		Assert.Contains(new RedditGameEntry(appid, false, long.MaxValue), entries, new GameEntryIdentifierEqualityComparer());
+		Assert.Contains(new RedditGameEntry(appid, default(ERedditGameEntryKind), long.MaxValue), entries, new GameEntryIdentifierEqualityComparer());
 	}
 
 	[Fact]
@@ -40,6 +40,62 @@ public sealed class RedditHelperTests {
 		int app1631250 = Array.FindIndex(entries, static entry => entry.Identifier == "a/1631250");
 		Assert.InRange(app1631250, checked(app1601550 + 1), long.MaxValue); // app1631250 is after app1601550
 		Assert.Equal(entries.Length - 1, app1631250);
+	}
+
+	[Fact]
+	public void TestFreeToPlayParsing() {
+		JToken payload = ASFinfo.Value;
+		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
+		Assert.True(f2pEntry.IsFreeToPlay);
+
+		RedditGameEntry getEntry(string identifier) => Array.Find(entries, entry => entry.Identifier == identifier);
+
+		f2pEntry = getEntry("a/431650"); // F2P
+		Assert.True(f2pEntry.IsFreeToPlay);
+
+		f2pEntry = getEntry("a/579730");
+		Assert.True(f2pEntry.IsFreeToPlay);
+
+		RedditGameEntry dlcEntry = getEntry("s/791643"); // DLC
+		Assert.False(dlcEntry.IsFreeToPlay);
+
+		dlcEntry = getEntry("s/791642");
+		Assert.False(dlcEntry.IsFreeToPlay);
+
+		RedditGameEntry paidEntry = getEntry("s/762440"); // Warhammer: Vermintide 2
+		Assert.False(paidEntry.IsFreeToPlay);
+
+		paidEntry = getEntry("a/1601550");
+		Assert.False(paidEntry.IsFreeToPlay);
+	}
+
+	[Fact]
+	public void TestDlcParsing() {
+		JToken payload = ASFinfo.Value;
+		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
+		Assert.False(f2pEntry.IsForDlc);
+
+		RedditGameEntry getEntry(string identifier) => Array.Find(entries, entry => entry.Identifier == identifier);
+
+		f2pEntry = getEntry("a/431650"); // F2P
+		Assert.False(f2pEntry.IsForDlc);
+
+		f2pEntry = getEntry("a/579730");
+		Assert.False(f2pEntry.IsForDlc);
+
+		RedditGameEntry dlcEntry = getEntry("s/791643"); // DLC
+		Assert.True(dlcEntry.IsForDlc);
+
+		dlcEntry = getEntry("s/791642");
+		Assert.True(dlcEntry.IsForDlc);
+
+		RedditGameEntry paidEntry = getEntry("s/762440"); // Warhammer: Vermintide 2
+		Assert.False(paidEntry.IsForDlc);
+
+		paidEntry = getEntry("a/1601550");
+		Assert.False(paidEntry.IsForDlc);
 	}
 
 	private static JToken LoadAsfinfoJson() {

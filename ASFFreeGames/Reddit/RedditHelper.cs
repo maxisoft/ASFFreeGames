@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ArchiSteamFarm.Web;
 using ArchiSteamFarm.Web.Responses;
 using BloomFilter;
 using JetBrains.Annotations;
@@ -14,17 +15,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Maxisoft.ASF.Reddit;
 
-internal sealed class RedditHelper {
+internal sealed partial class RedditHelper {
 	private const string User = "ASFinfo";
 
 	private static Uri GetUrl() => new Uri($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
-	private readonly Lazy<Regex> CommandRegex = new Lazy<Regex>(
-		static () => new Regex(
-			@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+.*?(?<free>permanently\s+free)?",
-			RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant
-		)
-	);
+	[GeneratedRegex(@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex CommandRegex();
+
+	[GeneratedRegex(@"permanently\s+free", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex IsPermanentlyFreeRegex();
+
+
+	[GeneratedRegex(@"free\s+DLC\s+for\s+a", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex IsDlcRegex();
 
 	private const int PoolMaxGameEntry = 1024;
 	private static readonly ArrayPool<RedditGameEntry> ArrayPool = ArrayPool<RedditGameEntry>.Create(PoolMaxGameEntry, 1);
@@ -32,23 +36,29 @@ internal sealed class RedditHelper {
 	private const int BloomFilterBufferSize = 8;
 
 	internal RedditGameEntry[] LoadMessages(JToken children) {
-		Regex regex = CommandRegex.Value;
-		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
 		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
+		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
 
 		try {
 			SpanList<RedditGameEntry> list = new(buffer);
 
-			foreach (var comment in children.Children<JObject>()) {
+			foreach (JObject comment in children.Children<JObject>()) {
 				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
-				var text = commentData?.Value<string>("body") ?? string.Empty;
-				var date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
-				var matches = regex.Matches(text);
+				string text = commentData?.Value<string>("body") ?? string.Empty;
+				long date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
+				MatchCollection matches = CommandRegex().Matches(text);
 
 				foreach (Match match in matches) {
-					bool freeToPlay = match.Groups["free"].Success;
-					RedditGameEntry gameEntry;
+					ERedditGameEntryKind kind = ERedditGameEntryKind.None;
+
+					if (IsPermanentlyFreeRegex().IsMatch(text)) {
+						kind |= ERedditGameEntryKind.FreeToPlay;
+					}
+
+					if (IsDlcRegex().IsMatch(text)) {
+						kind = ERedditGameEntryKind.Dlc;
+					}
 
 					foreach (Group matchGroup in match.Groups) {
 						if (!matchGroup.Name.StartsWith("appid", StringComparison.InvariantCulture)) {
@@ -56,7 +66,7 @@ internal sealed class RedditHelper {
 						}
 
 						foreach (Capture capture in matchGroup.Captures) {
-							gameEntry = new RedditGameEntry(capture.Value, freeToPlay, date);
+							RedditGameEntry gameEntry = new(capture.Value, kind, date);
 
 							int index = -1;
 
@@ -65,7 +75,11 @@ internal sealed class RedditHelper {
 							}
 
 							if (index >= 0) {
-								list[index] = gameEntry;
+								ref RedditGameEntry oldEntry = ref list[index];
+
+								if (gameEntry.Date > oldEntry.Date) {
+									oldEntry = gameEntry;
+								}
 							}
 							else {
 								list.Add(in gameEntry);
@@ -91,8 +105,8 @@ internal sealed class RedditHelper {
 	}
 
 	public async ValueTask<ICollection<RedditGameEntry>> ListGames() {
-		var webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
-		var res = Array.Empty<RedditGameEntry>();
+		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
+		RedditGameEntry[] res = Array.Empty<RedditGameEntry>();
 
 		if (webBrowser is null) {
 			return res;
@@ -111,14 +125,14 @@ internal sealed class RedditHelper {
 			return res;
 		}
 
-		if ((payload.Content.Value<string>("kind") ?? string.Empty) != "Listing") {
+		if ((payload.Content?.Value<string>("kind") ?? string.Empty) != "Listing") {
 			return res;
 		}
 
-		var data = payload.Content.Value<JObject>("data");
+		JObject? data = payload.Content?.Value<JObject>("data");
 
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalse
-		if (data is null || !data.TryGetValue("children", out var children) || children is null) {
+		if (data is null || !data.TryGetValue("children", out JToken? children) || children is null) {
 			return res;
 		}
 

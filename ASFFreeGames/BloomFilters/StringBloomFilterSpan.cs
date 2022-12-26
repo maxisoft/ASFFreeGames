@@ -162,9 +162,11 @@ public ref struct StringBloomFilterSpan {
 	/// <param name="i"> The i. </param>
 	/// <returns> The <see cref="int" />. </returns>
 	private int ComputeHash(int primaryHash, int secondaryHash, int i) {
-		int resultingHash = (primaryHash + (i * secondaryHash)) % HashBits.Count;
+		unchecked {
+			int resultingHash = (primaryHash + (i * secondaryHash)) % HashBits.Count;
 
-		return Math.Abs(resultingHash);
+			return Math.Abs(resultingHash);
+		}
 	}
 
 	/// <summary>
@@ -176,15 +178,17 @@ public ref struct StringBloomFilterSpan {
 	private static int HashString(string s) {
 		int hash = 0;
 
-		foreach (char t in s) {
-			hash += t;
-			hash += hash << 10;
-			hash ^= hash >> 6;
-		}
+		unchecked {
+			foreach (char t in s) {
+				hash += t;
+				hash += hash << 10;
+				hash ^= hash >> 6;
+			}
 
-		hash += hash << 3;
-		hash ^= hash >> 11;
-		hash += hash << 15;
+			hash += hash << 3;
+			hash ^= hash >> 11;
+			hash += hash << 15;
+		}
 
 		return hash;
 	}

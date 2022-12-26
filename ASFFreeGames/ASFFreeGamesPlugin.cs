@@ -15,6 +15,7 @@ using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
 using ArchiSteamFarm.Steam.Interaction;
 using JetBrains.Annotations;
+using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.Reddit;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -26,7 +27,7 @@ namespace Maxisoft.ASF;
 #pragma warning disable CA1812 // ASF uses this class during runtime
 [UsedImplicitly]
 [SuppressMessage("Design", "CA1001:Disposable fields")]
-internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2 {
+internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware {
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 	private const int DayInSeconds = 24 * 60 * 60;
 	public string Name => nameof(ASFFreeGamesPlugin);
@@ -42,16 +43,17 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private static readonly EPurchaseResultDetail[] InvalidAppPurchaseCodes = { EPurchaseResultDetail.AlreadyPurchased, EPurchaseResultDetail.RegionNotSupported, EPurchaseResultDetail.InvalidPackage, EPurchaseResultDetail.DoesNotOwnRequiredApp };
 	private static readonly Lazy<Regex> InvalidAppPurchaseRegex = new(BuildInvalidAppPurchaseRegex);
 	private readonly LoggerFilter LoggerFilter = new();
+	private ASFFreeGamesOptions _options = new();
 
 	// ReSharper disable once RedundantDefaultMemberInitializer
 #pragma warning disable CA1805
-	internal bool VerboseLog { get; private set; } =
+	internal bool VerboseLog =>
 #if DEBUG
-		true
+		_options.VerboseLog ?? true
 #else
-		false
+		_options.VerboseLog ?? false
 #endif
-		;
+	;
 #pragma warning restore CA1805
 
 	private Timer? Timer;
@@ -96,18 +98,55 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		if (args is { Length: > 0 } && (args[0]?.ToUpperInvariant() == "FREEGAMES")) {
-			if ((args.Length > 2) && (args[1].ToUpperInvariant() == "SET")) {
-				switch (args[2].ToUpperInvariant()) {
-					case "VERBOSE":
-						VerboseLog = true;
+			if (args.Length >= 2) {
+				switch (args[1].ToUpperInvariant()) {
+					case "SET":
+						switch (args[2].ToUpperInvariant()) {
+							case "VERBOSE":
+								_options.VerboseLog = true;
+								await SaveOptions().ConfigureAwait(false);
 
-						return formatBotResponse("Verbosity on");
-					case "NOVERBOSE":
-						VerboseLog = false;
+								return formatBotResponse("Verbosity on");
+							case "NOVERBOSE":
+								_options.VerboseLog = false;
+								await SaveOptions().ConfigureAwait(false);
 
-						return formatBotResponse("Verbosity off");
-					default:
-						return formatBotResponse($"Unknown \"{args[2]}\" variable to set");
+								return formatBotResponse("Verbosity off");
+							case "F2P":
+							case "FREETOPLAY":
+							case "NOSKIPFREETOPLAY":
+								_options.SkipFreeToPlay = false;
+								await SaveOptions().ConfigureAwait(false);
+
+								return formatBotResponse($"{Name} is going to collect f2p games");
+							case "NOF2P":
+							case "NOFREETOPLAY":
+							case "SKIPFREETOPLAY":
+								_options.SkipFreeToPlay = true;
+								await SaveOptions().ConfigureAwait(false);
+
+								return formatBotResponse($"{Name} is now skipping f2p games");
+							case "DLC":
+							case "NOSKIPDLC":
+								_options.SkipDLC = false;
+								await SaveOptions().ConfigureAwait(false);
+
+								return formatBotResponse($"{Name} is going to collect dlc");
+							case "NODLC":
+							case "SKIPDLC":
+								_options.SkipDLC = true;
+								await SaveOptions().ConfigureAwait(false);
+
+								return formatBotResponse($"{Name} is now skipping dlc");
+
+							default:
+								return formatBotResponse($"Unknown \"{args[2]}\" variable to set");
+						}
+
+					case "RELOAD":
+						ASFFreeGamesOptionsLoader.Bind(ref _options);
+
+						break;
 				}
 			}
 
@@ -119,10 +158,16 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		return null;
 	}
 
-	public Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
-		VerboseLog = GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose")?.ToObject<bool>() ?? VerboseLog;
+	private async Task SaveOptions() {
+		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationTS.Value.Token);
+		cts.CancelAfter(10_000);
+		await ASFFreeGamesOptionsLoader.Save(_options, cts.Token).ConfigureAwait(false);
+	}
 
-		return Task.CompletedTask;
+	public async Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
+		ASFFreeGamesOptionsLoader.Bind(ref _options);
+		_options.VerboseLog ??= GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose")?.ToObject<bool?>() ?? _options.VerboseLog;
+		await SaveOptions().ConfigureAwait(false);
 	}
 
 	public async Task OnBotDestroy(Bot bot) => await RemoveBot(bot).ConfigureAwait(false);
@@ -154,11 +199,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private async Task RegisterBot(Bot bot) {
 		Bots.Add(bot);
 
-		if (Timer is null) {
-			var delay = TimeSpan.FromMilliseconds(GlobalDatabase?.LoadFromJsonStorage($"{Name}.timer")?.ToObject<double>() ?? TimeSpan.FromMinutes(30).TotalMilliseconds);
-			ResetTimer(new Timer(CollectGamesOnClock));
-			Timer?.Change(TimeSpan.FromSeconds(30), delay);
-		}
+		StartTimerIfNeeded();
 
 		if (!BotContexts.TryGetValue(bot.BotName, out var ctx)) {
 			lock (BotContexts) {
@@ -171,10 +212,18 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		await ctx.LoadFromFileSystem(CancellationTS.Value.Token).ConfigureAwait(false);
 	}
 
+	private void StartTimerIfNeeded() {
+		if (Timer is null) {
+			TimeSpan delay = TimeSpan.FromMilliseconds(_options.RecheckIntervalMs);
+			ResetTimer(new Timer(CollectGamesOnClock));
+			Timer?.Change(TimeSpan.FromSeconds(30), delay);
+		}
+	}
+
 	public async Task OnBotLoggedOn(Bot bot) => await RegisterBot(bot).ConfigureAwait(false);
 
 	private async void CollectGamesOnClock(object? source) {
-		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(CollectGamesTimeout));
+		using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(CollectGamesTimeout));
 
 		Bot[] reorderedBots;
 
@@ -228,11 +277,19 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 					continue;
 				}
 
+				if (_options.IsBlacklisted(bot)) {
+					continue;
+				}
+
 				bool save = false;
 				BotContext context = BotContexts[bot.BotName];
 
-				foreach ((string? identifier, bool freeToPlay, long time) in games) {
-					if (freeToPlay) {
+				foreach ((string? identifier, long time, bool freeToPlay, bool dlc) in games) {
+					if (freeToPlay && _options.SkipFreeToPlay is true) {
+						continue;
+					}
+
+					if (dlc && _options.SkipDLC is true) {
 						continue;
 					}
 
@@ -240,7 +297,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 						continue;
 					}
 
-					if (context.HasApp(gid)) {
+					if (context.HasApp(in gid)) {
+						continue;
+					}
+
+					if (_options.IsBlacklisted(in gid)) {
 						continue;
 					}
 
@@ -375,5 +436,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		Timer?.Dispose();
 		Timer = null;
 	}
+
+	public async Task OnUpdateFinished(Version currentVersion, Version newVersion) => await SaveOptions().ConfigureAwait(false);
+
+	public Task OnUpdateProceeding(Version currentVersion, Version newVersion) => Task.CompletedTask;
 }
 #pragma warning restore CA1812 // ASF uses this class during runtime
