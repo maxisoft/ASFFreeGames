@@ -4,8 +4,6 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DebugSymbols>True</DebugSymbols>
 		<DebugType>pdbonly</DebugType>
-		<TargetFramework>net7.0</TargetFramework>
-		<TargetFrameworks />
 	</PropertyGroup>
 
 	<ItemGroup>
