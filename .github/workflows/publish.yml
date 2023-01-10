@@ -178,7 +178,7 @@ jobs:
     # However, that is currently impossible due to https://github.com/dotnet/msbuild/issues/3897
     # Therefore, we'll (sadly) pull artifacts from Windows machine only for now
     - name: Download generic artifact from windows-latest
-      uses: actions/download-artifact@v3.0.1
+      uses: actions/download-artifact@v3.0.2
       with:
         name: windows-latest_${{ env.PLUGIN_NAME }}-generic
         path: out
