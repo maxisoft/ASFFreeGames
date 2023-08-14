@@ -11,6 +11,7 @@ namespace Maxisoft.ASF.Configurations;
 
 public static class ASFFreeGamesOptionsLoader {
 	public static void Bind(ref ASFFreeGamesOptions options) {
+		// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 		options ??= new ASFFreeGamesOptions();
 		Semaphore.Wait();
 
@@ -21,10 +22,11 @@ public static class ASFFreeGamesOptionsLoader {
 			options.Blacklist = new HashSet<string>(blacklist, StringComparer.InvariantCultureIgnoreCase);
 
 			options.VerboseLog = configurationRoot.GetValue("VerboseLog", options.VerboseLog);
-			options.RecheckIntervalMs = configurationRoot.GetValue("RecheckIntervalMs", options.RecheckIntervalMs);
+			options.RecheckInterval = TimeSpan.FromMilliseconds(configurationRoot.GetValue("RecheckIntervalMs", options.RecheckInterval.TotalMilliseconds));
 			options.SkipFreeToPlay = configurationRoot.GetValue("SkipFreeToPlay", options.SkipFreeToPlay);
 			options.SkipDLC = configurationRoot.GetValue("SkipDLC", options.SkipDLC);
-			options.RandomizeRecheckIntervalMs = configurationRoot.GetValue("RandomizeRecheckIntervalMs", options.RandomizeRecheckIntervalMs);
+			double? randomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckIntervalMs", options.RandomizeRecheckInterval?.TotalMilliseconds);
+			options.RandomizeRecheckInterval = randomizeRecheckInterval is not null ? TimeSpan.FromMilliseconds(randomizeRecheckInterval.Value) : null;
 		}
 		finally {
 			Semaphore.Release();
@@ -50,10 +52,19 @@ public static class ASFFreeGamesOptionsLoader {
 		try {
 #pragma warning disable CAC001
 #pragma warning disable CA2007
-			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+
+			// Use FileOptions.Asynchronous when creating a file stream for async operations
+			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
 #pragma warning restore CA2007
 #pragma warning restore CAC001
-			await JsonSerializer.SerializeAsync(fs, options, new JsonSerializerOptions { WriteIndented = true }, cancellationToken).ConfigureAwait(false);
+
+			// Use JsonSerializerOptions.PropertyNamingPolicy to specify the JSON property naming convention
+			await JsonSerializer.SerializeAsync(
+				fs, options, new JsonSerializerOptions {
+					WriteIndented = true,
+					PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+				}, cancellationToken
+			).ConfigureAwait(false);
 		}
 		finally {
 			Semaphore.Release();

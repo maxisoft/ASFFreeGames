@@ -10,7 +10,6 @@ namespace ASFFreeGames.Tests.Reddit;
 
 public sealed class RedditHelperTests {
 	private static readonly Lazy<JToken> ASFinfo = new(LoadAsfinfoJson);
-	private readonly RedditHelper RedditHelper = new();
 
 	[Fact]
 	public void TestNotEmpty() {
