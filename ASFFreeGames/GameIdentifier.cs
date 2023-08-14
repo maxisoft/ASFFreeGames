@@ -1,36 +1,26 @@
 ﻿using System;
-using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Runtime.CompilerServices;
+
+// ReSharper disable RedundantNullableFlowAttribute
 
 namespace Maxisoft.ASF;
 
-// ReSharper disable once InconsistentNaming
-[SuppressMessage("Design", "CA1051")]
-public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
-	public readonly long Id;
-
-	public readonly GameIdentifierType Type = GameIdentifierType.None;
-
-	public GameIdentifier(long id = default, GameIdentifierType type = default) {
-		Id = id;
-		Type = type;
-	}
-
+/// <summary>
+///     Represents a readonly record struct that encapsulates a game identifier with a numeric ID and a type.
+/// </summary>
+public readonly record struct GameIdentifier(long Id, GameIdentifierType Type = GameIdentifierType.None) {
+	/// <summary>
+	///     Gets a value indicating whether the game identifier is valid.
+	/// </summary>
 	public bool Valid => (Id > 0) && Type is >= GameIdentifierType.None and <= GameIdentifierType.App;
-
-	public static bool operator ==(GameIdentifier left, GameIdentifier right) => left.Equals(right);
-
-	public static bool operator !=(GameIdentifier left, GameIdentifier right) => !left.Equals(right);
-
-	public bool Equals(GameIdentifier other) => (Id == other.Id) && (Type == other.Type);
-
-	public override bool Equals(object? obj) => obj is GameIdentifier other && Equals(other);
 
 	public override int GetHashCode() => unchecked(((ulong) Id ^ BinaryPrimitives.ReverseEndianness((ulong) Type)).GetHashCode());
 
+	/// <summary>
+	///     Returns the string representation of the game identifier.
+	/// </summary>
 	[SuppressMessage("Design", "CA1065")]
 	public override string ToString() =>
 		Type switch {
@@ -40,64 +30,11 @@ public readonly struct GameIdentifier : IEquatable<GameIdentifier> {
 			_ => throw new ArgumentOutOfRangeException(nameof(Type))
 		};
 
-	public static bool TryParse([NotNull] ReadOnlySpan<char> query, out GameIdentifier result) {
-		ulong gameID;
-		ReadOnlySpan<char> type;
-		GameIdentifierType identifierType = GameIdentifierType.None;
-
-		int index = query.IndexOf("/", StringComparison.Ordinal);
-
-		if ((index > 0) && (query.Length > index + 1)) {
-			if (!ulong.TryParse(query[(index + 1)..], out gameID) || (gameID == 0)) {
-				result = default(GameIdentifier);
-
-				return false;
-			}
-
-			type = query[..index];
-		}
-		else if (ulong.TryParse(query, out gameID) && (gameID > 0)) {
-			type = "SUB";
-		}
-		else {
-			result = default(GameIdentifier);
-
-			return false;
-		}
-
-		if (type.Length > 3) {
-			type = type[..3];
-		}
-
-		if (type.Length == 1) {
-			identifierType = char.ToUpperInvariant(type[0]) switch {
-				'A' => GameIdentifierType.App,
-				'S' => GameIdentifierType.Sub,
-				_ => identifierType
-			};
-		}
-
-		if (identifierType is GameIdentifierType.None) {
-			switch (type.ToString().ToUpperInvariant()) {
-				case "A":
-				case "APP":
-					identifierType = GameIdentifierType.App;
-
-					break;
-				case "S":
-				case "SUB":
-					identifierType = GameIdentifierType.Sub;
-
-					break;
-				default:
-					identifierType = GameIdentifierType.None;
-
-					break;
-			}
-		}
-
-		result = new GameIdentifier((long) gameID, identifierType);
-
-		return true;
-	}
+	/// <summary>
+	///     Tries to parse a game identifier from a query string.
+	/// </summary>
+	/// <param name="query">The query string to parse.</param>
+	/// <param name="result">The resulting game identifier if the parsing was successful.</param>
+	/// <returns>True if the parsing was successful; otherwise, false.</returns>
+	public static bool TryParse([NotNull] ReadOnlySpan<char> query, out GameIdentifier result) => GameIdentifierParser.TryParse(query, out result);
 }
