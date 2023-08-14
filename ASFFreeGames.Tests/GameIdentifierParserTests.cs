@@ -3,6 +3,8 @@ using Xunit;
 
 namespace Maxisoft.ASF.Tests;
 
+#pragma warning disable CA1707
+
 // A test class for the GameIdentifierParser class
 public sealed class GameIdentifierParserTests {
 	// A test method that checks if the TryParse method can handle invalid game identifiers
@@ -16,10 +18,6 @@ public sealed class GameIdentifierParserTests {
 	[InlineData("a/")] // Missing AppID
 	[InlineData("s/")] // Missing SubID
 	public void TryParse_InvalidGameIdentifiers_ReturnsFalseAndDefaultResult(string query) {
-		// Arrange
-		// The default result for invalid queries
-		GameIdentifier defaultResult = default;
-
 		// Act and Assert
 		Assert.False(GameIdentifierParser.TryParse(query, out _)); // Parsing should return false
 	}
@@ -44,3 +42,4 @@ public sealed class GameIdentifierParserTests {
 		Assert.Equal(expectedResult, result); // Result should match the expected result
 	}
 }
+#pragma warning restore CA1707

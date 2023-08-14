@@ -3,6 +3,8 @@ using Xunit;
 
 namespace Maxisoft.ASF.Tests;
 
+#pragma warning disable CA1707 // Identifiers should not contain underscores
+
 // A test class for the GameIdentifier struct
 public sealed class GameIdentifierTests {
 	// A test method that checks if the Valid property returns true for valid game identifiers
@@ -78,3 +80,5 @@ public sealed class GameIdentifierTests {
 		Assert.NotEqual(gameIdentifier1.GetHashCode(), gameIdentifier2.GetHashCode()); // The GetHashCode method should return different values for both game identifiers
 	}
 }
+
+#pragma warning restore CA1707
