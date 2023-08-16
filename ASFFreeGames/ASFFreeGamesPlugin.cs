@@ -82,6 +82,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	public Task OnUpdateProceeding(Version currentVersion, Version newVersion) => Task.CompletedTask;
 
 	private async void CollectGamesOnClock(object? source) {
+		// Calculate a random delay using GetRandomizedTimerDelay method
+		TimeSpan delay = GetRandomizedTimerDelay();
+
+		// Reset the timer with the new delay
+		ResetTimer(() => new Timer(CollectGamesOnClock, source, delay, delay));
+
 		if ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count)) {
 			Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token));
 		}
@@ -107,6 +113,33 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
 			await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
 		}
+	}
+
+	private static readonly RandomUtils.GaussianRandom Random = new();
+
+	/// <summary>
+	/// Calculates a random delay using a normal distribution with a mean of 30 minutes and a standard deviation of 7 minutes.
+	/// </summary>
+	/// <returns>The randomized delay.</returns>
+	/// <remarks>
+	/// The random number is clamped between 11 minutes and 1 hour.
+	/// This method uses the NextGaussian method from the RandomUtils class to generate normally distributed random numbers.
+	/// </remarks>
+	private static TimeSpan GetRandomizedTimerDelay() {
+		double randomNumber = Random.NextGaussian(30 * 60, 7 * 60);
+		TimeSpan delay = TimeSpan.FromSeconds(randomNumber);
+
+		// Convert delay to seconds
+		double delaySeconds = delay.TotalSeconds;
+
+		// Clamp the delay between 11 minutes and 1 hour in seconds
+		delaySeconds = Math.Max(delaySeconds, 11 * 60);
+		delaySeconds = Math.Min(delaySeconds, 60 * 60);
+
+		// Convert delay back to TimeSpan
+		delay = TimeSpan.FromSeconds(delaySeconds);
+
+		return delay;
 	}
 
 	private async Task RegisterBot(Bot bot) {
@@ -144,9 +177,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		Context.LoggerFilter.RemoveFilters(bot);
 	}
 
-	private void ResetTimer(Timer? newTimer = null) {
+	private void ResetTimer(Func<Timer?>? newTimerFactory = null) {
 		Timer?.Dispose();
-		Timer = newTimer;
+		Timer = null;
+
+		if (newTimerFactory is not null) {
+			Timer = newTimerFactory();
+		}
 	}
 
 	private async Task SaveOptions(CancellationToken cancellationToken) {
@@ -159,7 +196,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private void StartTimerIfNeeded() {
 		if (Timer is null) {
 			TimeSpan delay = Options.RecheckInterval;
-			ResetTimer(new Timer(CollectGamesOnClock));
+			ResetTimer(() => new Timer(CollectGamesOnClock));
 			Timer?.Change(TimeSpan.FromSeconds(30), delay);
 		}
 	}
