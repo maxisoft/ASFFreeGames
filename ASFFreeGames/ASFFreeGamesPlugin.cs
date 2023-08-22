@@ -16,10 +16,17 @@ using static ArchiSteamFarm.Core.ASF;
 
 namespace Maxisoft.ASF;
 
+internal interface IASFFreeGamesPlugin {
+	internal Version Version { get; }
+	internal ASFFreeGamesOptions Options { get; }
+
+	internal void CollectGamesOnClock(object? source);
+}
+
 #pragma warning disable CA1812 // ASF uses this class during runtime
 [UsedImplicitly]
 [SuppressMessage("Design", "CA1001:Disposable fields")]
-internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware {
+internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware, IASFFreeGamesPlugin {
 	internal const string StaticName = nameof(ASFFreeGamesPlugin);
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 
@@ -44,17 +51,19 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private bool VerboseLog => Options.VerboseLog ?? true;
 	private readonly ContextRegistry BotContextRegistry = new();
 
-	private ASFFreeGamesOptions Options = new();
+	public ASFFreeGamesOptions Options => OptionsField;
+	private ASFFreeGamesOptions OptionsField = new();
 
-	private Timer? Timer;
+	private readonly CollectIntervalManager CollectIntervalManager;
 
 	public ASFFreeGamesPlugin() {
 		CommandDispatcher = new CommandDispatcher(Options);
+		CollectIntervalManager = new CollectIntervalManager(this);
 		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token));
 	}
 
 	public async Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
-		ASFFreeGamesOptionsLoader.Bind(ref Options);
+		ASFFreeGamesOptionsLoader.Bind(ref OptionsField);
 		Options.VerboseLog ??= GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose")?.ToObject<bool?>() ?? Options.VerboseLog;
 		await SaveOptions(CancellationToken).ConfigureAwait(false);
 	}
@@ -81,12 +90,8 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 	public Task OnUpdateProceeding(Version currentVersion, Version newVersion) => Task.CompletedTask;
 
-	private async void CollectGamesOnClock(object? source) {
-		// Calculate a random delay using GetRandomizedTimerDelay method
-		TimeSpan delay = GetRandomizedTimerDelay();
-
-		// Reset the timer with the new delay
-		ResetTimer(() => new Timer(CollectGamesOnClock, source, delay, delay));
+	public async void CollectGamesOnClock(object? source) {
+		CollectIntervalManager.RandomlyChangeCollectInterval(source);
 
 		if ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count)) {
 			Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token));
@@ -113,59 +118,6 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
 			await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
 		}
-	}
-
-	private static readonly RandomUtils.GaussianRandom Random = new();
-
-	/// <summary>
-	/// Calculates a random delay using a normal distribution with a mean of Options.RecheckInterval.TotalSeconds and a standard deviation of 7 minutes.
-	/// </summary>
-	/// <returns>The randomized delay.</returns>
-	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)"/>
-	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
-
-	/// <summary>
-	/// Gets a value that indicates whether to randomize the collect interval or not.
-	/// </summary>
-	/// <value>
-	/// A value of 1 if Options.RandomizeRecheckInterval is true or null, or a value of 0 otherwise.
-	/// </value>
-	/// <remarks>
-	/// This property is used to multiply the standard deviation of the normal distribution used to generate the random delay in the GetRandomizedTimerDelay method. If this property returns 0, then the random delay will be equal to the mean value.
-	/// </remarks>
-	private int RandomizeIntervalSwitch => (Options.RandomizeRecheckInterval ?? true ? 1 : 0);
-
-	/// <summary>
-	/// Calculates a random delay using a normal distribution with a given mean and standard deviation.
-	/// </summary>
-	/// <param name="meanSeconds">The mean of the normal distribution in seconds.</param>
-	/// <param name="stdSeconds">The standard deviation of the normal distribution in seconds.</param>
-	/// <param name="minSeconds">The minimum value of the random delay in seconds. The default value is 11 minutes.</param>
-	/// <param name="maxSeconds">The maximum value of the random delay in seconds. The default value is 1 hour.</param>
-	/// <returns>The randomized delay.</returns>
-	/// <remarks>
-	/// The random number is clamped between the minSeconds and maxSeconds parameters.
-	/// This method uses the NextGaussian method from the RandomUtils class to generate normally distributed random numbers.
-	/// See [Random nextGaussian() method in Java with Examples] for more details on how to implement NextGaussian in C#.
-	/// </remarks>
-	private static TimeSpan GetRandomizedTimerDelay(double meanSeconds, double stdSeconds, double minSeconds = 11 * 60, double maxSeconds = 60 * 60) {
-		double randomNumber;
-
-		randomNumber = stdSeconds != 0 ? Random.NextGaussian(meanSeconds, stdSeconds) : meanSeconds;
-
-		TimeSpan delay = TimeSpan.FromSeconds(randomNumber);
-
-		// Convert delay to seconds
-		double delaySeconds = delay.TotalSeconds;
-
-		// Clamp the delay between minSeconds and maxSeconds in seconds
-		delaySeconds = Math.Max(delaySeconds, minSeconds);
-		delaySeconds = Math.Min(delaySeconds, maxSeconds);
-
-		// Convert delay back to TimeSpan
-		delay = TimeSpan.FromSeconds(delaySeconds);
-
-		return delay;
 	}
 
 	private async Task RegisterBot(Bot bot) {
@@ -197,19 +149,10 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		if (Bots.Count == 0) {
-			ResetTimer();
+			CollectIntervalManager.StopTimer();
 		}
 
 		Context.LoggerFilter.RemoveFilters(bot);
-	}
-
-	private void ResetTimer(Func<Timer?>? newTimerFactory = null) {
-		Timer?.Dispose();
-		Timer = null;
-
-		if (newTimerFactory is not null) {
-			Timer = newTimerFactory();
-		}
 	}
 
 	private async Task SaveOptions(CancellationToken cancellationToken) {
@@ -219,15 +162,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 	}
 
-	private void StartTimerIfNeeded() {
-		if (Timer is null) {
-			TimeSpan delay = GetRandomizedTimerDelay();
-			ResetTimer(() => new Timer(CollectGamesOnClock));
-			Timer?.Change(GetRandomizedTimerDelay(30, 6 * RandomizeIntervalSwitch, 1, 5 * 60), delay);
-		}
-	}
+	private void StartTimerIfNeeded() => CollectIntervalManager.StartTimerIfNeeded();
 
-	~ASFFreeGamesPlugin() => ResetTimer();
+	~ASFFreeGamesPlugin() => CollectIntervalManager.Dispose();
 }
 
 #pragma warning restore CA1812 // ASF uses this class during runtime
