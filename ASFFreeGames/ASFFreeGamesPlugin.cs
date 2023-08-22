@@ -118,23 +118,35 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private static readonly RandomUtils.GaussianRandom Random = new();
 
 	/// <summary>
-	/// Calculates a random delay using a normal distribution with a mean of 30 minutes and a standard deviation of 7 minutes.
+	/// Calculates a random delay using a normal distribution with a mean of Options.RecheckInterval.TotalSeconds and a standard deviation of 7 minutes.
 	/// </summary>
 	/// <returns>The randomized delay.</returns>
+	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)"/>
+	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Options.RecheckInterval.TotalSeconds, 7 * 60);
+
+	/// <summary>
+	/// Calculates a random delay using a normal distribution with a given mean and standard deviation.
+	/// </summary>
+	/// <param name="meanSeconds">The mean of the normal distribution in seconds.</param>
+	/// <param name="stdSeconds">The standard deviation of the normal distribution in seconds.</param>
+	/// <param name="minSeconds">The minimum value of the random delay in seconds. The default value is 11 minutes.</param>
+	/// <param name="maxSeconds">The maximum value of the random delay in seconds. The default value is 1 hour.</param>
+	/// <returns>The randomized delay.</returns>
 	/// <remarks>
-	/// The random number is clamped between 11 minutes and 1 hour.
+	/// The random number is clamped between the minSeconds and maxSeconds parameters.
 	/// This method uses the NextGaussian method from the RandomUtils class to generate normally distributed random numbers.
+	/// See [Random nextGaussian() method in Java with Examples] for more details on how to implement NextGaussian in C#.
 	/// </remarks>
-	private static TimeSpan GetRandomizedTimerDelay() {
-		double randomNumber = Random.NextGaussian(30 * 60, 7 * 60);
+	private static TimeSpan GetRandomizedTimerDelay(double meanSeconds, double stdSeconds, double minSeconds = 11 * 60, double maxSeconds = 60 * 60) {
+		double randomNumber = Random.NextGaussian(meanSeconds, stdSeconds);
 		TimeSpan delay = TimeSpan.FromSeconds(randomNumber);
 
 		// Convert delay to seconds
 		double delaySeconds = delay.TotalSeconds;
 
-		// Clamp the delay between 11 minutes and 1 hour in seconds
-		delaySeconds = Math.Max(delaySeconds, 11 * 60);
-		delaySeconds = Math.Min(delaySeconds, 60 * 60);
+		// Clamp the delay between minSeconds and maxSeconds in seconds
+		delaySeconds = Math.Max(delaySeconds, minSeconds);
+		delaySeconds = Math.Min(delaySeconds, maxSeconds);
 
 		// Convert delay back to TimeSpan
 		delay = TimeSpan.FromSeconds(delaySeconds);
@@ -195,16 +207,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 	private void StartTimerIfNeeded() {
 		if (Timer is null) {
-			TimeSpan delay = Options.RecheckInterval;
+			TimeSpan delay = GetRandomizedTimerDelay();
 			ResetTimer(() => new Timer(CollectGamesOnClock));
-			Timer?.Change(TimeSpan.FromSeconds(30), delay);
+			Timer?.Change(GetRandomizedTimerDelay(30, 6, 1, 5 * 60), delay);
 		}
 	}
 
-	~ASFFreeGamesPlugin() {
-		Timer?.Dispose();
-		Timer = null;
-	}
+	~ASFFreeGamesPlugin() => ResetTimer();
 }
 
 #pragma warning restore CA1812 // ASF uses this class during runtime
