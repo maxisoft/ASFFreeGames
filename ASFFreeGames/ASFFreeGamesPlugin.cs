@@ -122,7 +122,18 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	/// </summary>
 	/// <returns>The randomized delay.</returns>
 	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)"/>
-	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Options.RecheckInterval.TotalSeconds, 7 * 60);
+	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
+
+	/// <summary>
+	/// Gets a value that indicates whether to randomize the collect interval or not.
+	/// </summary>
+	/// <value>
+	/// A value of 1 if Options.RandomizeRecheckInterval is true or null, or a value of 0 otherwise.
+	/// </value>
+	/// <remarks>
+	/// This property is used to multiply the standard deviation of the normal distribution used to generate the random delay in the GetRandomizedTimerDelay method. If this property returns 0, then the random delay will be equal to the mean value.
+	/// </remarks>
+	private int RandomizeIntervalSwitch => (Options.RandomizeRecheckInterval ?? true ? 1 : 0);
 
 	/// <summary>
 	/// Calculates a random delay using a normal distribution with a given mean and standard deviation.
@@ -138,7 +149,10 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	/// See [Random nextGaussian() method in Java with Examples] for more details on how to implement NextGaussian in C#.
 	/// </remarks>
 	private static TimeSpan GetRandomizedTimerDelay(double meanSeconds, double stdSeconds, double minSeconds = 11 * 60, double maxSeconds = 60 * 60) {
-		double randomNumber = Random.NextGaussian(meanSeconds, stdSeconds);
+		double randomNumber;
+
+		randomNumber = stdSeconds != 0 ? Random.NextGaussian(meanSeconds, stdSeconds) : meanSeconds;
+
 		TimeSpan delay = TimeSpan.FromSeconds(randomNumber);
 
 		// Convert delay to seconds
@@ -209,7 +223,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		if (Timer is null) {
 			TimeSpan delay = GetRandomizedTimerDelay();
 			ResetTimer(() => new Timer(CollectGamesOnClock));
-			Timer?.Change(GetRandomizedTimerDelay(30, 6, 1, 5 * 60), delay);
+			Timer?.Change(GetRandomizedTimerDelay(30, 6 * RandomizeIntervalSwitch, 1, 5 * 60), delay);
 		}
 	}
 

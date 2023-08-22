@@ -14,7 +14,7 @@ namespace Maxisoft.ASF {
 
 		// Use Nullable<T> instead of bool? for nullable value types
 		[JsonProperty("randomizeRecheckInterval")]
-		public Nullable<TimeSpan> RandomizeRecheckInterval { get; set; }
+		public Nullable<bool> RandomizeRecheckInterval { get; set; }
 
 		[JsonProperty("skipFreeToPlay")]
 		public Nullable<bool> SkipFreeToPlay { get; set; }

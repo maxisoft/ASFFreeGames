@@ -25,8 +25,7 @@ public static class ASFFreeGamesOptionsLoader {
 			options.RecheckInterval = TimeSpan.FromMilliseconds(configurationRoot.GetValue("RecheckIntervalMs", options.RecheckInterval.TotalMilliseconds));
 			options.SkipFreeToPlay = configurationRoot.GetValue("SkipFreeToPlay", options.SkipFreeToPlay);
 			options.SkipDLC = configurationRoot.GetValue("SkipDLC", options.SkipDLC);
-			double? randomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckIntervalMs", options.RandomizeRecheckInterval?.TotalMilliseconds);
-			options.RandomizeRecheckInterval = randomizeRecheckInterval is not null ? TimeSpan.FromMilliseconds(randomizeRecheckInterval.Value) : null;
+			options.RandomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckInterval", options.RandomizeRecheckInterval);
 		}
 		finally {
 			Semaphore.Release();
