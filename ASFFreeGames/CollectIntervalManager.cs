@@ -3,7 +3,31 @@ using System.Threading;
 
 namespace Maxisoft.ASF;
 
-internal sealed class CollectIntervalManager : IDisposable {
+// The interface that defines the contract for the CollectIntervalManager class
+/// <inheritdoc />
+/// <summary>
+/// An interface that provides methods to manage the collect interval for the ASFFreeGamesPlugin.
+/// </summary>
+internal interface ICollectIntervalManager : IDisposable {
+	/// <summary>
+	/// Starts the timer with a random initial and regular delay if it is not already started.
+	/// </summary>
+	void StartTimerIfNeeded();
+
+	/// <summary>
+	/// Changes the collect interval to a new random value and resets the timer.
+	/// </summary>
+	/// <param name="source">The source object passed to the timer callback.</param>
+	/// <returns>The new random collect interval.</returns>
+	TimeSpan RandomlyChangeCollectInterval(object? source);
+
+	/// <summary>
+	/// Stops the timer and disposes it.
+	/// </summary>
+	void StopTimer();
+}
+
+internal sealed class CollectIntervalManager : ICollectIntervalManager {
 	private static readonly RandomUtils.GaussianRandom Random = new();
 
 	/// <summary>
@@ -52,7 +76,7 @@ internal sealed class CollectIntervalManager : IDisposable {
 	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)" />
 	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
 
-	internal TimeSpan RandomlyChangeCollectInterval(object? source) {
+	public TimeSpan RandomlyChangeCollectInterval(object? source) {
 		// Calculate a random delay using GetRandomizedTimerDelay method
 		TimeSpan delay = GetRandomizedTimerDelay();
 		ResetTimer(() => new Timer(state => Plugin.CollectGamesOnClock(state), source, delay, delay));
@@ -60,7 +84,7 @@ internal sealed class CollectIntervalManager : IDisposable {
 		return delay;
 	}
 
-	internal void StopTimer() => ResetTimer(null);
+	public void StopTimer() => ResetTimer(null);
 
 	/// <summary>
 	///     Calculates a random delay using a normal distribution with a given mean and standard deviation.

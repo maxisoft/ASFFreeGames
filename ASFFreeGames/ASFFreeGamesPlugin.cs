@@ -54,7 +54,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	public ASFFreeGamesOptions Options => OptionsField;
 	private ASFFreeGamesOptions OptionsField = new();
 
-	private readonly CollectIntervalManager CollectIntervalManager;
+	private readonly ICollectIntervalManager CollectIntervalManager;
 
 	public ASFFreeGamesPlugin() {
 		CommandDispatcher = new CommandDispatcher(Options);
