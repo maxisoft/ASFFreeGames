@@ -159,11 +159,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 		StartTimerIfNeeded();
 
-		await BotContextRegistry.SaveBotContext(bot, new BotContext(bot), CancellationTokenSourceLazy.Value.Token).ConfigureAwait(false);
+		await BotContextRegistry.SaveBotContext(bot, new BotContext(bot), CancellationToken).ConfigureAwait(false);
 		BotContext? ctx = BotContextRegistry.GetBotContext(bot);
 
 		if (ctx is not null) {
-			await ctx.LoadFromFileSystem(CancellationTokenSourceLazy.Value.Token).ConfigureAwait(false);
+			await ctx.LoadFromFileSystem(CancellationToken).ConfigureAwait(false);
 		}
 	}
 
