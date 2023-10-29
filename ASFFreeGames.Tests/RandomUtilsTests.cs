@@ -11,10 +11,10 @@ public class RandomUtilsTests {
 	public static TheoryData<double, double, int, double> GetTestData() =>
 		new TheoryData<double, double, int, double> {
 			// mean, std, sample size, margin of error
-			{ 0, 1, 1000, 0.05 }, // original test case
-			{ 10, 2, 1000, 0.1 }, // original test case
-			{ -5, 3, 5000, 0.15 }, // additional test case
-			{ 20, 5, 10000, 0.2 } // additional test case
+			{ 0, 1, 10000, 0.05 },
+			{ 10, 2, 10000, 0.1 },
+			{ -5, 3, 50000, 0.15 },
+			{ 20, 5, 100000, 0.2 }
 		};
 
 	// A test method to check if the mean and standard deviation of the normal distribution are close to the expected values
