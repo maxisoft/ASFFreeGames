@@ -113,7 +113,7 @@ jobs:
     - name: Upload stdout
       continue-on-error: true
       if: always()
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v3.1.3
       with:
         name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
         path: out.txt
