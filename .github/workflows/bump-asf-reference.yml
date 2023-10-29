@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v4.1.1
       with:
         token: ${{ env.PUSH_GITHUB_TOKEN }}
 
@@ -33,7 +33,7 @@ jobs:
         excludes: draft,prerelease
 
     - name: Import GPG key for signing
-      uses: crazy-max/ghaction-import-gpg@v5.3.0
+      uses: crazy-max/ghaction-import-gpg@v6.0.0
       if: ${{ env.GPG_PRIVATE_KEY != null }}
       with:
         gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
@@ -64,7 +64,7 @@ jobs:
         fi
 
     - name: Push changes to the repo
-      uses: ad-m/github-push-action@v0.6.0
+      uses: ad-m/github-push-action@v0.8.0
       with:
         github_token: ${{ env.PUSH_GITHUB_TOKEN }}
         branch: ${{ github.ref }}

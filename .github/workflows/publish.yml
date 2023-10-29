@@ -22,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v4.1.1
       with:
         submodules: recursive
 
@@ -160,7 +160,7 @@ jobs:
 
     - name: Upload generic
       continue-on-error: true
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v3.1.3
       with:
         name: ${{ matrix.os }}_${{ env.PLUGIN_NAME }}-generic
         path: out/${{ env.PLUGIN_NAME }}-generic.zip
@@ -172,7 +172,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v4.1.1
 
     # TODO: It'd be perfect if we could match final artifacts to the platform they target, so e.g. linux build comes from the linux machine
     # However, that is currently impossible due to https://github.com/dotnet/msbuild/issues/3897
