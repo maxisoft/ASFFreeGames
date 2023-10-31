@@ -31,7 +31,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 
 	internal static PluginContext Context {
-		get => _context.Value;
+		get => _context.Value ?? new PluginContext(Array.Empty<Bot>(), new ContextRegistry(), new ASFFreeGamesOptions(), new LoggerFilter());
 		private set => _context.Value = value;
 	}
 
@@ -169,6 +169,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		LoggerFilter.RemoveFilters(bot);
 	}
 
+	// ReSharper disable once UnusedMethodReturnValue.Local
 	private async Task<string?> SaveOptions(CancellationToken cancellationToken) {
 		if (!cancellationToken.IsCancellationRequested) {
 			const string cmd = $"FREEGAMES {FreeGamesCommand.SaveOptionsInternalCommandString}";
