@@ -59,7 +59,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	public ASFFreeGamesPlugin() {
 		CommandDispatcher = new CommandDispatcher(Options);
 		CollectIntervalManager = new CollectIntervalManager(this);
-		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token));
+		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter) { CancellationTokenLazy = new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token) };
 	}
 
 	public async Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
@@ -110,26 +110,29 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			return;
 		}
 
-		Bot[] reorderedBots;
-		IContextRegistry botContexts = Context.BotContexts;
+		// ReSharper disable once AccessToDisposedClosure
+		using (Context.TemporaryChangeCancellationToken(() => cts.Token)) {
+			Bot[] reorderedBots;
+			IContextRegistry botContexts = Context.BotContexts;
 
-		lock (botContexts) {
-			long orderByRunKeySelector(Bot bot) => botContexts.GetBotContext(bot)?.RunElapsedMilli ?? long.MaxValue;
-			int comparison(Bot x, Bot y) => orderByRunKeySelector(y).CompareTo(orderByRunKeySelector(x)); // sort in descending order
-			reorderedBots = Bots.ToArray();
-			Array.Sort(reorderedBots, comparison);
-		}
+			lock (botContexts) {
+				long orderByRunKeySelector(Bot bot) => botContexts.GetBotContext(bot)?.RunElapsedMilli ?? long.MaxValue;
+				int comparison(Bot x, Bot y) => orderByRunKeySelector(y).CompareTo(orderByRunKeySelector(x)); // sort in descending order
+				reorderedBots = Bots.ToArray();
+				Array.Sort(reorderedBots, comparison);
+			}
 
-		if (!cts.IsCancellationRequested) {
-			string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
-			await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+			if (!cts.IsCancellationRequested) {
+				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
+				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+			}
 		}
 	}
 
 	/// <summary>
 	/// Creates a new PluginContext instance and assigns it to the Context property.
 	/// </summary>
-	private void CreateContext() => Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token), true);
+	private void CreateContext() => Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, true) { CancellationTokenLazy = new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token) };
 
 	private async Task RegisterBot(Bot bot) {
 		Bots.Add(bot);
@@ -166,11 +169,26 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		LoggerFilter.RemoveFilters(bot);
 	}
 
-	private async Task SaveOptions(CancellationToken cancellationToken) {
+	private async Task<string?> SaveOptions(CancellationToken cancellationToken) {
 		if (!cancellationToken.IsCancellationRequested) {
 			const string cmd = $"FREEGAMES {FreeGamesCommand.SaveOptionsInternalCommandString}";
-			await OnBotCommand(Bots.FirstOrDefault()!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+			async Task<string?> continuation() => await OnBotCommand(Bots.FirstOrDefault()!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+
+			string? result;
+
+			if (Context.Valid) {
+				using (Context.TemporaryChangeCancellationToken(() => cancellationToken)) {
+					result = await continuation().ConfigureAwait(false);
+				}
+			}
+			else {
+				result = await continuation().ConfigureAwait(false);
+			}
+
+			return result;
 		}
+
+		return null;
 	}
 
 	private void StartTimerIfNeeded() => CollectIntervalManager.StartTimerIfNeeded();
