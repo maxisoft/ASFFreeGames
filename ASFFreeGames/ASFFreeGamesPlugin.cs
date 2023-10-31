@@ -68,7 +68,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		await SaveOptions(CancellationToken).ConfigureAwait(false);
 	}
 
-	public async Task<string?> OnBotCommand(Bot bot, EAccess access, string message, string[] args, ulong steamID = 0) => await CommandDispatcher.Execute(bot, message, args, steamID).ConfigureAwait(false);
+	public async Task<string?> OnBotCommand(Bot bot, EAccess access, string message, string[] args, ulong steamID = 0) {
+		if (!Context.Valid) {
+			CreateContext();
+		}
+
+		return await CommandDispatcher.Execute(bot, message, args, steamID).ConfigureAwait(false);
+	}
 
 	public async Task OnBotDestroy(Bot bot) => await RemoveBot(bot).ConfigureAwait(false);
 
@@ -93,14 +99,14 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	public async void CollectGamesOnClock(object? source) {
 		CollectIntervalManager.RandomlyChangeCollectInterval(source);
 
-		if ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count)) {
-			Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token));
+		if (!Context.Valid || ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count))) {
+			CreateContext();
 		}
 
 		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 		cts.CancelAfter(TimeSpan.FromMilliseconds(CollectGamesTimeout));
 
-		if (cts.IsCancellationRequested) {
+		if (cts.IsCancellationRequested || !Context.Valid) {
 			return;
 		}
 
@@ -119,6 +125,11 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
 		}
 	}
+
+	/// <summary>
+	/// Creates a new PluginContext instance and assigns it to the Context property.
+	/// </summary>
+	private void CreateContext() => Context = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter, new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token), true);
 
 	private async Task RegisterBot(Bot bot) {
 		Bots.Add(bot);
@@ -152,7 +163,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			CollectIntervalManager.StopTimer();
 		}
 
-		Context.LoggerFilter.RemoveFilters(bot);
+		LoggerFilter.RemoveFilters(bot);
 	}
 
 	private async Task SaveOptions(CancellationToken cancellationToken) {

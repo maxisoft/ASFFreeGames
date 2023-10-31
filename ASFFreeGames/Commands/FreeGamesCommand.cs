@@ -41,13 +41,13 @@ namespace ASFFreeGames.Commands {
 			if (args.Length >= 2) {
 				switch (args[1].ToUpperInvariant()) {
 					case "SET":
-						return await HandleSetCommand(bot, args).ConfigureAwait(false);
+						return await HandleSetCommand(bot, args, cancellationToken).ConfigureAwait(false);
 					case "RELOAD":
 						return await HandleReloadCommand(bot).ConfigureAwait(false);
 					case SaveOptionsInternalCommandString:
-						return await HandleInternalSaveOptionsCommand(bot).ConfigureAwait(false);
+						return await HandleInternalSaveOptionsCommand(bot, cancellationToken).ConfigureAwait(false);
 					case CollectInternalCommandString:
-						return await HandleInternalCollectCommand(bot, args).ConfigureAwait(false);
+						return await HandleInternalCollectCommand(bot, args, cancellationToken).ConfigureAwait(false);
 				}
 			}
 
@@ -56,43 +56,46 @@ namespace ASFFreeGames.Commands {
 
 		private static string FormatBotResponse(Bot? bot, string resp) => IBotCommand.FormatBotResponse(bot, resp);
 
-		private async Task<string?> HandleSetCommand(Bot? bot, string[] args) {
+		private async Task<string?> HandleSetCommand(Bot? bot, string[] args, CancellationToken cancellationToken) {
+			using CancellationTokenSource cts = CreateLinkedTokenSource(cancellationToken);
+			cancellationToken = cts.Token;
+
 			if (args.Length >= 3) {
 				switch (args[2].ToUpperInvariant()) {
 					case "VERBOSE":
 						Options.VerboseLog = true;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, "Verbosity on");
 					case "NOVERBOSE":
 						Options.VerboseLog = false;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, "Verbosity off");
 					case "F2P":
 					case "FREETOPLAY":
 					case "NOSKIPFREETOPLAY":
 						Options.SkipFreeToPlay = false;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} is going to collect f2p games");
 					case "NOF2P":
 					case "NOFREETOPLAY":
 					case "SKIPFREETOPLAY":
 						Options.SkipFreeToPlay = true;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} is now skipping f2p games");
 					case "DLC":
 					case "NOSKIPDLC":
 						Options.SkipDLC = false;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} is going to collect dlc");
 					case "NODLC":
 					case "SKIPDLC":
 						Options.SkipDLC = true;
-						await SaveOptions().ConfigureAwait(false);
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} is now skipping dlc");
 
@@ -103,6 +106,13 @@ namespace ASFFreeGames.Commands {
 
 			return null;
 		}
+
+		/// <summary>
+		/// Creates a linked cancellation token source from the given cancellation token and the Context cancellation token.
+		/// </summary>
+		/// <param name="cancellationToken">The cancellation token to link.</param>
+		/// <returns>A CancellationTokenSource that is linked to both tokens.</returns>
+		private static CancellationTokenSource CreateLinkedTokenSource(CancellationToken cancellationToken) => Context.Valid ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, Context.CancellationToken) : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
 		private Task<string?> HandleReloadCommand(Bot? bot) {
 			ASFFreeGamesOptionsLoader.Bind(ref Options);
@@ -116,23 +126,24 @@ namespace ASFFreeGames.Commands {
 			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)");
 		}
 
-		private async ValueTask<string?> HandleInternalSaveOptionsCommand(Bot? bot) {
-			await SaveOptions().ConfigureAwait(false);
+		private async ValueTask<string?> HandleInternalSaveOptionsCommand(Bot? bot, CancellationToken cancellationToken) {
+			await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 			return null;
 		}
 
-		private async ValueTask<string?> HandleInternalCollectCommand(Bot? bot, string[] args) {
+		private async ValueTask<string?> HandleInternalCollectCommand(Bot? bot, string[] args, CancellationToken cancellationToken) {
 			Dictionary<string, Bot> botMap = Context.Bots.ToDictionary(static b => b.BotName, static b => b, StringComparer.InvariantCultureIgnoreCase);
-			int collected = await CollectGames(args.Skip(2).Select(botName => botMap[botName]), ECollectGameRequestSource.Scheduled, Context.CancellationToken).ConfigureAwait(false);
+			int collected = await CollectGames(args.Skip(2).Select(botName => botMap[botName]), ECollectGameRequestSource.Scheduled, cancellationToken).ConfigureAwait(false);
 
 			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)");
 		}
 
-		private async Task SaveOptions() {
-			using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(Context.CancellationToken);
+		private async Task SaveOptions(CancellationToken cancellationToken) {
+			using CancellationTokenSource cts = CreateLinkedTokenSource(cancellationToken);
+			cancellationToken = cts.Token;
 			cts.CancelAfter(10_000);
-			await ASFFreeGamesOptionsLoader.Save(Options, cts.Token).ConfigureAwait(false);
+			await ASFFreeGamesOptionsLoader.Save(Options, cancellationToken).ConfigureAwait(false);
 		}
 
 		private SemaphoreSlim? SemaphoreSlim;
@@ -156,6 +167,9 @@ namespace ASFFreeGames.Commands {
 #pragma warning restore CA1805
 
 		private async Task<int> CollectGames(IEnumerable<Bot> bots, ECollectGameRequestSource requestSource, CancellationToken cancellationToken = default) {
+			using CancellationTokenSource cts = CreateLinkedTokenSource(cancellationToken);
+			cancellationToken = cts.Token;
+
 			if (cancellationToken.IsCancellationRequested) {
 				return 0;
 			}
