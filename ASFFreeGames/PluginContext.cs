@@ -11,7 +11,7 @@ internal sealed record PluginContext(IReadOnlyCollection<Bot> Bots, IContextRegi
 	/// </summary>
 	public CancellationToken CancellationToken => CancellationTokenLazy.Value;
 
-	internal Lazy<CancellationToken> CancellationTokenLazy { private get; set; } = new(default(CancellationToken));
+	internal Lazy<CancellationToken> CancellationTokenLazy { private get; set; } = new(static () => default(CancellationToken));
 
 	/// <summary>
 	/// A struct that implements IDisposable and temporarily changes the cancellation token of the PluginContext instance.
