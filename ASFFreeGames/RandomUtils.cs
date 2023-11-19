@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace Maxisoft.ASF;
 
@@ -12,19 +13,32 @@ namespace Maxisoft.ASF;
 public static class RandomUtils {
 	internal sealed class GaussianRandom : RandomNumberGenerator {
 		// A flag to indicate if there is a stored value for the next Gaussian number
-		private bool HasNextGaussian;
+		private int HasNextGaussian;
+
+		private const int True = 1;
+		private const int False = 0;
 
 		// The stored value for the next Gaussian number
 		private double NextGaussianValue;
 
 		public override void GetBytes(byte[] data) => Fill(data);
 
-		public override void GetNonZeroBytes(byte[] data) => Fill(data);
+		public override void GetNonZeroBytes(Span<byte> data) {
+			Fill(data);
+			Span<byte> buffer = stackalloc byte[1];
+
+			for (int i = 0; i < data.Length; i++) {
+				while (data[i] == default(byte)) {
+					Fill(buffer);
+					data[i] = buffer[0];
+				}
+			}
+		}
+
+		public override void GetNonZeroBytes(byte[] data) => GetNonZeroBytes((Span<byte>) data);
 
 		private double NextDouble() {
-			if (HasNextGaussian) {
-				HasNextGaussian = false;
-
+			if (Interlocked.CompareExchange(ref HasNextGaussian, False, True) == True) {
 				return NextGaussianValue;
 			}
 
@@ -34,12 +48,13 @@ public static class RandomUtils {
 			double u1 = ulongs[0] / (double) ulong.MaxValue;
 			double u2 = ulongs[1] / (double) ulong.MaxValue;
 
-			// Apply the Box-Muller formula
+			// Box-Muller formula
 			double r = Math.Sqrt(-2.0f * Math.Log(u1));
 			double theta = 2.0 * Math.PI * u2;
 
-			NextGaussianValue = r * Math.Sin(theta);
-			HasNextGaussian = true;
+			if (Interlocked.CompareExchange(ref HasNextGaussian, True, False) == False) {
+				NextGaussianValue = r * Math.Sin(theta);
+			}
 
 			return r * Math.Cos(theta);
 		}
