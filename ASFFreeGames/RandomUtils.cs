@@ -42,7 +42,7 @@ public static class RandomUtils {
 				return NextGaussianValue;
 			}
 
-			Span<byte> bytes = stackalloc byte[16];
+			Span<byte> bytes = stackalloc byte[2 * sizeof(long)];
 			Span<ulong> ulongs = MemoryMarshal.Cast<byte, ulong>(bytes);
 			double u1;
 
@@ -54,7 +54,7 @@ public static class RandomUtils {
 			double u2 = ulongs[1] / (double) ulong.MaxValue;
 
 			// Box-Muller formula
-			double r = Math.Sqrt(-2.0f * Math.Log(u1));
+			double r = Math.Sqrt(-2.0 * Math.Log(u1));
 			double theta = 2.0 * Math.PI * u2;
 
 			if (Interlocked.CompareExchange(ref HasNextGaussian, True, False) == False) {
@@ -73,9 +73,15 @@ public static class RandomUtils {
 		/// <remarks>
 		///     This method uses the overridden NextDouble method to get a normally distributed random number.
 		/// </remarks>
-		public double NextGaussian(double mean, double standardDeviation) =>
+		public double NextGaussian(double mean, double standardDeviation) {
+			// Use the overridden NextDouble method to get a normally distributed random
+			double rnd;
 
-			// Use the overridden NextDouble method to get a normally distributed random number
-			mean + (standardDeviation * NextDouble());
+			do {
+				rnd = NextDouble();
+			} while (!double.IsFinite(rnd));
+
+			return mean + (standardDeviation * rnd);
+		}
 	}
 }
