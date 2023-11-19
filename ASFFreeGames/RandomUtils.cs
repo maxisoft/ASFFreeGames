@@ -43,9 +43,14 @@ public static class RandomUtils {
 			}
 
 			Span<byte> bytes = stackalloc byte[16];
-			Fill(bytes);
 			Span<ulong> ulongs = MemoryMarshal.Cast<byte, ulong>(bytes);
-			double u1 = ulongs[0] / (double) ulong.MaxValue;
+			double u1;
+
+			do {
+				GetNonZeroBytes(bytes);
+				u1 = ulongs[0] / (double) ulong.MaxValue;
+			} while (u1 <= double.Epsilon);
+
 			double u2 = ulongs[1] / (double) ulong.MaxValue;
 
 			// Box-Muller formula
