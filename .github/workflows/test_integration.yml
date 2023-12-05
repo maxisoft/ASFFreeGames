@@ -39,7 +39,7 @@ jobs:
 
     - name: Setup .NET Core
       timeout-minutes: 5
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
