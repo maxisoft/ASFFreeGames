@@ -33,7 +33,7 @@ jobs:
         excludes: draft,prerelease
 
     - name: Import GPG key for signing
-      uses: crazy-max/ghaction-import-gpg@v6.0.0
+      uses: crazy-max/ghaction-import-gpg@v6.1.0
       if: ${{ env.GPG_PRIVATE_KEY != null }}
       with:
         gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
