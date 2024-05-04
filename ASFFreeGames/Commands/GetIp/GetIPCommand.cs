@@ -28,7 +28,11 @@ internal sealed class GetIPCommand : IBotCommand {
 		}
 
 		try {
+#pragma warning disable CAC001
+#pragma warning disable CA2007
 			await using StreamResponse? result = await web.UrlGetToStream(new Uri(GetIPAddressUrl), cancellationToken: cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA2007
+#pragma warning restore CAC001
 
 			if (result?.Content is null) { return null; }
 
