@@ -23,7 +23,7 @@ public class RandomUtilsTests {
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	public void NextGaussian_Should_Have_Expected_Mean_And_Std(double mean, double standardDeviation, int sampleSize, double marginOfError) {
 		// Arrange
-		using RandomUtils.GaussianRandom rng = new();
+		RandomUtils.GaussianRandom rng = new();
 
 		// Act
 		// Generate a large number of samples from the normal distribution

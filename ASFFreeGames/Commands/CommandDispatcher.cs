@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.Commands.GetIp;
+using ASFFreeGames.Configurations;
 using Maxisoft.ASF;
 
 namespace ASFFreeGames.Commands {

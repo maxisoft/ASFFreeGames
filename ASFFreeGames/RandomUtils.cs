@@ -11,7 +11,8 @@ namespace Maxisoft.ASF;
 #nullable enable
 
 public static class RandomUtils {
-	internal sealed class GaussianRandom : RandomNumberGenerator {
+	internal sealed class GaussianRandom {
+
 		// A flag to indicate if there is a stored value for the next Gaussian number
 		private int HasNextGaussian;
 
@@ -21,21 +22,35 @@ public static class RandomUtils {
 		// The stored value for the next Gaussian number
 		private double NextGaussianValue;
 
-		public override void GetBytes(byte[] data) => Fill(data);
+		private void GetNonZeroBytes(Span<byte> data) {
+			Span<byte> bytes = stackalloc byte[sizeof(long)];
 
-		public override void GetNonZeroBytes(Span<byte> data) {
-			Fill(data);
-			Span<byte> buffer = stackalloc byte[1];
+			static void fill(Span<byte> bytes) {
+				// use this method to use a RNGs function that's still included with the ASF trimmed binary
+				// do not try to refactor or optimize this without testing
+				byte[] rng = RandomNumberGenerator.GetBytes(bytes.Length);
+				((ReadOnlySpan<byte>) rng).CopyTo(bytes);
+			}
+
+			fill(bytes);
+			int c = 0;
 
 			for (int i = 0; i < data.Length; i++) {
-				while (data[i] == default(byte)) {
-					Fill(buffer);
-					data[i] = buffer[0];
-				}
+				byte value;
+
+				do {
+					value = bytes[c];
+					c++;
+
+					if (c >= bytes.Length) {
+						fill(bytes);
+						c = 0;
+					}
+				} while (value == 0);
+
+				data[i] = value;
 			}
 		}
-
-		public override void GetNonZeroBytes(byte[] data) => GetNonZeroBytes((Span<byte>) data);
 
 		private double NextDouble() {
 			if (Interlocked.CompareExchange(ref HasNextGaussian, False, True) == True) {
@@ -43,6 +58,7 @@ public static class RandomUtils {
 			}
 
 			Span<byte> bytes = stackalloc byte[2 * sizeof(long)];
+
 			Span<ulong> ulongs = MemoryMarshal.Cast<byte, ulong>(bytes);
 			double u1;
 

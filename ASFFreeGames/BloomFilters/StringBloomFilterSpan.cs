@@ -43,7 +43,7 @@ public ref struct StringBloomFilterSpan {
 	///     Adds a new item to the filter. It cannot be removed.
 	/// </summary>
 	/// <param name="item">The item.</param>
-	public void Add([JetBrains.Annotations.NotNull] in string item) {
+	public void Add(in string item) {
 		// start flipping bits for each hash of item
 #pragma warning disable CA1062
 		int primaryHash = item.GetHashCode(StringComparison.Ordinal);
@@ -61,7 +61,7 @@ public ref struct StringBloomFilterSpan {
 	/// </summary>
 	/// <param name="item"> The item. </param>
 	/// <returns> The <see cref="bool" />. </returns>
-	public bool Contains([JetBrains.Annotations.NotNull] in string item) {
+	public bool Contains(in string item) {
 #pragma warning disable CA1062
 		int primaryHash = item.GetHashCode(StringComparison.Ordinal);
 #pragma warning restore CA1062

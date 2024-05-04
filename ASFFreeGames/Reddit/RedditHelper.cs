@@ -2,31 +2,34 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Text.Json; // Not using System.Text.Json for JsonDocument
+using System.Text.Json.Nodes; // Using System.Text.Json.Nodes for JsonNode
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Core;
+using ArchiSteamFarm.Helpers.Json;
 using ArchiSteamFarm.Web;
 using ArchiSteamFarm.Web.Responses;
 using BloomFilter;
 using Maxisoft.Utils.Collections.Spans;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Maxisoft.ASF.Reddit;
 
 internal sealed partial class RedditHelper {
 	private const int BloomFilterBufferSize = 8;
-
 	private const int PoolMaxGameEntry = 1024;
 	private const string User = "ASFinfo";
 	private static readonly ArrayPool<RedditGameEntry> ArrayPool = ArrayPool<RedditGameEntry>.Create(PoolMaxGameEntry, 1);
 
-	/// A method that gets a collection of Reddit game entries from a JSON object
 	/// <summary>
 	/// Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<ICollection<RedditGameEntry>> GetGames() {
+	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(CancellationToken cancellationToken) {
 		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
 		RedditGameEntry[] result = Array.Empty<RedditGameEntry>();
 
@@ -34,36 +37,35 @@ internal sealed partial class RedditHelper {
 			return result;
 		}
 
-		ObjectResponse<JToken>? jsonPayload = null;
+		JsonNode jsonPayload;
 
 		try {
-			jsonPayload = await TryGetPayload(webBrowser).ConfigureAwait(false);
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo("b4 the payload");
+			jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"got the payload");
 		}
 		catch (Exception exception) when (exception is JsonException or IOException) {
 			return result;
 		}
 
-		if (jsonPayload is null) {
+		try {
+			if ((jsonPayload["kind"]?.GetValue<string>() != "Listing") ||
+				jsonPayload["data"] is null) {
+				return result;
+			}
+		}
+		catch (Exception e) when (e is FormatException or InvalidOperationException) {
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo("invalid json");
+
 			return result;
 		}
 
-		// Use pattern matching to check for null and type
-		if (jsonPayload.Content is JObject jObject &&
-			jObject.TryGetValue("kind", out JToken? kind) &&
-			(kind.Value<string>() == "Listing") &&
-			jObject.TryGetValue("data", out JToken? data) &&
-			data is JObject) {
-			JToken? children = data["children"];
+		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
-			if (children is not null) {
-				return LoadMessages(children);
-			}
-		}
-
-		return result; // Return early if children is not found or not an array
+		return childrenElement is null ? result : LoadMessages(childrenElement);
 	}
 
-	internal static RedditGameEntry[] LoadMessages(JToken children) {
+	internal static RedditGameEntry[] LoadMessages(JsonNode children) {
 		Span<long> bloomFilterBuffer = stackalloc long[BloomFilterBufferSize];
 		StringBloomFilterSpan bloomFilter = new(bloomFilterBuffer, 3);
 		RedditGameEntry[] buffer = ArrayPool.Rent(PoolMaxGameEntry / 2);
@@ -71,10 +73,34 @@ internal sealed partial class RedditHelper {
 		try {
 			SpanList<RedditGameEntry> list = new(buffer);
 
-			foreach (JObject comment in children.Children<JObject>()) {
-				JToken? commentData = comment.GetValue("data", StringComparison.InvariantCulture);
-				string text = commentData?.Value<string>("body") ?? string.Empty;
-				long date = commentData?.Value<long?>("created_utc") ?? commentData?.Value<long?>("created") ?? 0;
+			// ReSharper disable once LoopCanBePartlyConvertedToQuery
+			foreach (JsonNode? comment in children.AsArray()) {
+				JsonNode? commentData = comment?["data"];
+
+				if (commentData is null) {
+					continue;
+				}
+
+				long date;
+				string text;
+
+				try {
+					text = commentData["body"]?.GetValue<string>() ?? string.Empty;
+
+					date = checked((long) (commentData["created_utc"]?.GetValue<double>() ?? 0));
+
+					if (!double.IsNormal(date)) {
+						date = checked((long) (commentData["created"]?.GetValue<double>() ?? 0));
+					}
+				}
+				catch (Exception e) when (e is FormatException or InvalidOperationException) {
+					continue;
+				}
+
+				if (!double.IsNormal(date) || (date <= 0)) {
+					continue;
+				}
+
 				MatchCollection matches = CommandRegex().Matches(text);
 
 				foreach (Match match in matches) {
@@ -95,7 +121,6 @@ internal sealed partial class RedditHelper {
 
 						foreach (Capture capture in matchGroup.Captures) {
 							RedditGameEntry gameEntry = new(capture.Value, kind, date);
-
 							int index = -1;
 
 							if (bloomFilter.Contains(gameEntry.Identifier)) {
@@ -125,7 +150,6 @@ internal sealed partial class RedditHelper {
 			return list.ToArray();
 		}
 		finally {
-			// Use a finally block to ensure that the buffer is returned to the pool
 			ArrayPool.Return(buffer);
 		}
 	}
@@ -145,24 +169,48 @@ internal sealed partial class RedditHelper {
 	/// Tries to get a JSON object from Reddit.
 	/// </summary>
 	/// <param name="webBrowser">The web browser instance to use.</param>
+	/// <param name="cancellationToken"></param>
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async Task<ObjectResponse<JToken>?> TryGetPayload(WebBrowser webBrowser) {
+	private static async ValueTask<JsonNode?> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken) {
+		StreamResponse? stream = null;
+
 		try {
-			return await webBrowser.UrlGetToJsonObject<JToken>(GetUrl(), rateLimitingDelay: 500).ConfigureAwait(false);
+			stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+			if (stream?.Content is null) {
+				throw new RedditServerException("Reddit server error: content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
+			}
+
+			return await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
 		}
-
-		catch (JsonReaderException) {
-			// ReSharper disable once UseAwaitUsing
-			using StreamResponse? response = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500).ConfigureAwait(false);
-
-			if (response is not null && response.StatusCode.IsServerErrorCode()) {
-				throw new RedditServerException($"Reddit server error: {response.StatusCode}", response.StatusCode);
+		catch (JsonException) {
+			if (stream is not null && stream.StatusCode.IsServerErrorCode()) {
+				throw new RedditServerException($"Reddit server error: {stream.StatusCode}", stream.StatusCode);
 			}
 
 			// If no RedditServerException was thrown, re-throw the original JsonReaderException
 			throw;
 		}
+		finally {
+			if (stream is not null) {
+				await stream.DisposeAsync().ConfigureAwait(false);
+			}
+
+			stream = null;
+		}
+	}
+
+	/// <summary>
+	/// Parses a JSON object from a stream response. Using not straightforward for ASF trimmed compatibility reasons
+	/// </summary>
+	/// <param name="stream">The stream response containing the JSON data.</param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
+	private static async Task<JsonNode?> ParseJsonNode(StreamResponse stream, CancellationToken cancellationToken) {
+		using StreamReader reader = new(stream.Content!, Encoding.UTF8);
+
+		return JsonNode.Parse(await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false));
 	}
 }

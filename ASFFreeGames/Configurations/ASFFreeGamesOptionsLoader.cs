@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm;
+using ASFFreeGames.Commands.GetIp;
+using ASFFreeGames.Configurations;
 using Microsoft.Extensions.Configuration;
 
 namespace Maxisoft.ASF.Configurations;
@@ -58,12 +60,7 @@ public static class ASFFreeGamesOptionsLoader {
 #pragma warning restore CAC001
 
 			// Use JsonSerializerOptions.PropertyNamingPolicy to specify the JSON property naming convention
-			await JsonSerializer.SerializeAsync(
-				fs, options, new JsonSerializerOptions {
-					WriteIndented = true,
-					PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-				}, cancellationToken
-			).ConfigureAwait(false);
+			await JsonSerializer.SerializeAsync(fs, options, cancellationToken: cancellationToken).ConfigureAwait(false);
 		}
 		finally {
 			Semaphore.Release();

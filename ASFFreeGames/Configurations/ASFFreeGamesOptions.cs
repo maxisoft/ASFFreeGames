@@ -2,44 +2,46 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json.Serialization;
 using ArchiSteamFarm.Steam;
 using Maxisoft.ASF;
-using Newtonsoft.Json;
 
-namespace Maxisoft.ASF {
-	public class ASFFreeGamesOptions {
-		// Use TimeSpan instead of long for representing time intervals
-		[JsonProperty("recheckInterval")]
-		public TimeSpan RecheckInterval { get; set; } = TimeSpan.FromMinutes(30);
+namespace ASFFreeGames.Configurations;
 
-		// Use Nullable<T> instead of bool? for nullable value types
-		[JsonProperty("randomizeRecheckInterval")]
-		public Nullable<bool> RandomizeRecheckInterval { get; set; }
+public class ASFFreeGamesOptions {
+	// Use TimeSpan instead of long for representing time intervals
+	[JsonPropertyName("recheckInterval")]
+	public TimeSpan RecheckInterval { get; set; } = TimeSpan.FromMinutes(30);
 
-		[JsonProperty("skipFreeToPlay")]
-		public Nullable<bool> SkipFreeToPlay { get; set; }
+	// Use Nullable<T> instead of bool? for nullable value types
+	[JsonPropertyName("randomizeRecheckInterval")]
+	public bool? RandomizeRecheckInterval { get; set; }
 
-		// ReSharper disable once InconsistentNaming
-		[JsonProperty("skipDLC")]
-		public Nullable<bool> SkipDLC { get; set; }
+	[JsonPropertyName("skipFreeToPlay")]
+	public bool? SkipFreeToPlay { get; set; }
 
-		// Use IReadOnlyCollection<string> instead of HashSet<string> for blacklist property
-		[JsonProperty("blacklist")]
-		public IReadOnlyCollection<string> Blacklist { get; set; } = new HashSet<string>();
+	// ReSharper disable once InconsistentNaming
+	[JsonPropertyName("skipDLC")]
+	public bool? SkipDLC { get; set; }
 
-		[JsonProperty("verboseLog")]
-		public Nullable<bool> VerboseLog { get; set; }
+	// Use IReadOnlyCollection<string> instead of HashSet<string> for blacklist property
+	[JsonPropertyName("blacklist")]
+	public IReadOnlyCollection<string> Blacklist { get; set; } = new HashSet<string>();
 
-		#region IsBlacklisted
-		public bool IsBlacklisted(in GameIdentifier gid) {
-			if (Blacklist.Count <= 0) {
-				return false;
-			}
+	[JsonPropertyName("verboseLog")]
+	public bool? VerboseLog { get; set; }
 
-			return Blacklist.Contains(gid.ToString()) || Blacklist.Contains(gid.Id.ToString(NumberFormatInfo.InvariantInfo));
+	#region IsBlacklisted
+	public bool IsBlacklisted(in GameIdentifier gid) {
+		if (Blacklist.Count <= 0) {
+			return false;
 		}
 
-		public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
-		#endregion
+		return Blacklist.Contains(gid.ToString()) || Blacklist.Contains(gid.Id.ToString(CultureInfo.InvariantCulture));
 	}
+
+	public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
+	#endregion
 }
+
+

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.Configurations;
 
 namespace Maxisoft.ASF;
 
