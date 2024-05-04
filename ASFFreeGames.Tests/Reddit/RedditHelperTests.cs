@@ -99,14 +99,16 @@ public sealed class RedditHelperTests {
 	private static async Task<RedditGameEntry[]> LoadAsfinfoEntries() {
 		Assembly assembly = Assembly.GetExecutingAssembly();
 
+#pragma warning disable CA2007
 		await using Stream stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.ASFinfo.json")!;
+#pragma warning restore CA2007
 		JsonNode jsonNode = await JsonNode.ParseAsync(stream).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
 
 		return RedditHelper.LoadMessages(jsonNode["data"]?["children"]!);
 	}
 
 	private static async Task<string> ReadToEndAsync(Stream stream, CancellationToken cancellationToken) {
-		using StreamReader reader = new StreamReader(stream);
+		using StreamReader reader = new(stream);
 
 		return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 	}
