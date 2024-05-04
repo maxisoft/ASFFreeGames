@@ -61,6 +61,7 @@ public static class ASFFreeGamesOptionsLoader {
 
 			// Use JsonSerializerOptions.PropertyNamingPolicy to specify the JSON property naming convention
 			await JsonSerializer.SerializeAsync(fs, options, cancellationToken: cancellationToken).ConfigureAwait(false);
+			fs.SetLength(fs.Position);
 		}
 		finally {
 			Semaphore.Release();
