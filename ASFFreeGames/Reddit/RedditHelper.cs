@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json; // Not using System.Text.Json for JsonDocument
 using System.Text.Json.Nodes; // Using System.Text.Json.Nodes for JsonNode
@@ -37,14 +38,7 @@ internal sealed partial class RedditHelper {
 			return result;
 		}
 
-		JsonNode jsonPayload;
-
-		try {
-			jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
-		}
-		catch (Exception exception) when (exception is JsonException or IOException) {
-			return result;
-		}
+		JsonNode jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
 
 		try {
 			if ((jsonPayload["kind"]?.GetValue<string>() != "Listing") ||
@@ -85,9 +79,14 @@ internal sealed partial class RedditHelper {
 				try {
 					text = commentData["body"]?.GetValue<string>() ?? string.Empty;
 
-					date = checked((long) (commentData["created_utc"]?.GetValue<double>() ?? 0));
+					try {
+						date = checked((long) (commentData["created_utc"]?.GetValue<double>() ?? 0));
+					}
+					catch (Exception e) when (e is FormatException or InvalidOperationException) {
+						date = 0;
+					}
 
-					if (!double.IsNormal(date)) {
+					if (!double.IsNormal(date) || (date <= 0)) {
 						date = checked((long) (commentData["created"]?.GetValue<double>() ?? 0));
 					}
 				}
@@ -168,36 +167,46 @@ internal sealed partial class RedditHelper {
 	/// </summary>
 	/// <param name="webBrowser">The web browser instance to use.</param>
 	/// <param name="cancellationToken"></param>
+	/// <param name="retry"></param>
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async ValueTask<JsonNode?> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken) {
+	private static async ValueTask<JsonNode?> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken, uint retry = 5) {
 		StreamResponse? stream = null;
 
-		try {
-			stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, cancellationToken: cancellationToken).ConfigureAwait(false);
+		for (int t = 0; t < retry; t++) {
+			try {
+				stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-			if (stream?.Content is null) {
-				throw new RedditServerException("Reddit server error: content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
+				if (stream?.Content is null) {
+					throw new RedditServerException("Reddit server error: content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
+				}
+
+				if (stream.StatusCode.IsServerErrorCode()) {
+					throw new RedditServerException($"Reddit server error: {stream.StatusCode}", stream.StatusCode);
+				}
+
+				return await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+			}
+			catch (Exception e) when (e is JsonException or IOException or RedditServerException or HttpRequestException) {
+				// If no RedditServerException was thrown, re-throw the original Exception
+				if (t + 1 == retry) {
+					throw;
+				}
+			}
+			finally {
+				if (stream is not null) {
+					await stream.DisposeAsync().ConfigureAwait(false);
+				}
+
+				stream = null;
 			}
 
-			return await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+			await Task.Delay((2 << t) * 100, cancellationToken).ConfigureAwait(false);
+			cancellationToken.ThrowIfCancellationRequested();
 		}
-		catch (JsonException) {
-			if (stream is not null && stream.StatusCode.IsServerErrorCode()) {
-				throw new RedditServerException($"Reddit server error: {stream.StatusCode}", stream.StatusCode);
-			}
 
-			// If no RedditServerException was thrown, re-throw the original JsonReaderException
-			throw;
-		}
-		finally {
-			if (stream is not null) {
-				await stream.DisposeAsync().ConfigureAwait(false);
-			}
-
-			stream = null;
-		}
+		return JsonNode.Parse("{}");
 	}
 
 	/// <summary>
