@@ -40,9 +40,7 @@ internal sealed partial class RedditHelper {
 		JsonNode jsonPayload;
 
 		try {
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo("b4 the payload");
 			jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"got the payload");
 		}
 		catch (Exception exception) when (exception is JsonException or IOException) {
 			return result;
