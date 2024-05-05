@@ -4,6 +4,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DebugSymbols>True</DebugSymbols>
 		<DebugType>pdbonly</DebugType>
+		<TargetFramework>net8.0</TargetFramework>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -11,7 +12,6 @@
 		<PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
 		<PackageReference Include="NLog" />
 		<PackageReference Include="System.Composition.AttributedModel" IncludeAssets="compile" />
-		<PackageReference Include="Newtonsoft.Json" />
 		<PackageReference Include="SteamKit2" />
 	</ItemGroup>
 

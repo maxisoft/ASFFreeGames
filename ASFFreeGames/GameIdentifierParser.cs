@@ -13,7 +13,7 @@ internal static class GameIdentifierParser {
 	/// <param name="query">The query string to parse.</param>
 	/// <param name="result">The resulting game identifier if the parsing was successful.</param>
 	/// <returns>True if the parsing was successful; otherwise, false.</returns>
-	public static bool TryParse([NotNull] ReadOnlySpan<char> query, out GameIdentifier result) {
+	public static bool TryParse(ReadOnlySpan<char> query, out GameIdentifier result) {
 		if (query.IsEmpty) // Check for empty query first
 		{
 			result = default(GameIdentifier);

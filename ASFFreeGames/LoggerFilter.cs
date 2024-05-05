@@ -124,16 +124,10 @@ public partial class LoggerFilter {
 	private bool RemoveFilters(BotName botName) => Filters.TryRemove(botName, out _);
 
 	// A class that implements a disposable object for removing filters
-	private sealed class LoggerRemoveFilterDisposable : IDisposable {
-		private readonly LinkedListNode<Func<LogEventInfo, bool>> Node;
-
-		public LoggerRemoveFilterDisposable(LinkedListNode<Func<LogEventInfo, bool>> node) => Node = node;
-
-		public void Dispose() => Node.List?.Remove(Node);
+	private sealed class LoggerRemoveFilterDisposable(LinkedListNode<Func<LogEventInfo, bool>> node) : IDisposable {
+		public void Dispose() => node.List?.Remove(node);
 	}
 
 	// A class that implements a custom filter that invokes a method
-	private class MarkedWhenMethodFilter : WhenMethodFilter {
-		public MarkedWhenMethodFilter(Func<LogEventInfo, FilterResult> filterMethod) : base(filterMethod) { }
-	}
+	private class MarkedWhenMethodFilter(Func<LogEventInfo, FilterResult> filterMethod) : WhenMethodFilter(filterMethod);
 }

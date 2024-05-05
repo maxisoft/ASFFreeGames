@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Collections;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
 using ASFFreeGames.Commands;
+using ASFFreeGames.Configurations;
 using JetBrains.Annotations;
 using Maxisoft.ASF.Configurations;
-using Newtonsoft.Json.Linq;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
 
@@ -24,7 +25,6 @@ internal interface IASFFreeGamesPlugin {
 }
 
 #pragma warning disable CA1812 // ASF uses this class during runtime
-[UsedImplicitly]
 [SuppressMessage("Design", "CA1001:Disposable fields")]
 internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware, IASFFreeGamesPlugin {
 	internal const string StaticName = nameof(ASFFreeGamesPlugin);
@@ -54,18 +54,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	public ASFFreeGamesOptions Options => OptionsField;
 	private ASFFreeGamesOptions OptionsField = new();
 
-	private readonly ICollectIntervalManager CollectIntervalManager;
+	private readonly CollectIntervalManager CollectIntervalManager;
 
 	public ASFFreeGamesPlugin() {
 		CommandDispatcher = new CommandDispatcher(Options);
 		CollectIntervalManager = new CollectIntervalManager(this);
 		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter) { CancellationTokenLazy = new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token) };
-	}
-
-	public async Task OnASFInit(IReadOnlyDictionary<string, JToken>? additionalConfigProperties = null) {
-		ASFFreeGamesOptionsLoader.Bind(ref OptionsField);
-		Options.VerboseLog ??= GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose")?.ToObject<bool?>() ?? Options.VerboseLog;
-		await SaveOptions(CancellationToken).ConfigureAwait(false);
 	}
 
 	public async Task<string?> OnBotCommand(Bot bot, EAccess access, string message, string[] args, ulong steamID = 0) {
@@ -90,6 +84,17 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		return Task.CompletedTask;
+	}
+
+	public async Task OnASFInit(IReadOnlyDictionary<string, JsonElement>? additionalConfigProperties = null) {
+		ASFFreeGamesOptionsLoader.Bind(ref OptionsField);
+		JsonElement? jsonElement = GlobalDatabase?.LoadFromJsonStorage($"{Name}.Verbose");
+
+		if (jsonElement?.ValueKind is JsonValueKind.True) {
+			Options.VerboseLog = true;
+		}
+
+		await SaveOptions(CancellationToken).ConfigureAwait(false);
 	}
 
 	public async Task OnUpdateFinished(Version currentVersion, Version newVersion) => await SaveOptions(Context.CancellationToken).ConfigureAwait(false);

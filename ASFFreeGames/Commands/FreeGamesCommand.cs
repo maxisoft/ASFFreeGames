@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.Configurations;
 using Maxisoft.ASF;
 using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.Reddit;
@@ -190,7 +191,7 @@ namespace ASFFreeGames.Commands {
 			int res = 0;
 
 			try {
-				ICollection<RedditGameEntry> games = await RedditHelper.GetGames().ConfigureAwait(false);
+				ICollection<RedditGameEntry> games = await RedditHelper.GetGames(cancellationToken).ConfigureAwait(false);
 
 				LogNewGameCount(games, VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser);
 

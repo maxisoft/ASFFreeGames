@@ -1,36 +1,37 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
 using Maxisoft.ASF.Reddit;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Maxisoft.Utils.Collections.Spans;
 using Xunit;
 
-namespace ASFFreeGames.Tests.Reddit;
+namespace Maxisoft.ASF.Tests.Reddit;
 
 public sealed class RedditHelperTests {
-	private static readonly Lazy<JToken> ASFinfo = new(LoadAsfinfoJson);
-
 	[Fact]
-	public void TestNotEmpty() {
-		JToken payload = ASFinfo.Value;
-		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+	public async Task TestNotEmpty() {
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
 		Assert.NotEmpty(entries);
 	}
 
 	[Theory]
 	[InlineData("s/762440")]
 	[InlineData("a/1601550")]
-	public void TestContains(string appid) {
-		JToken payload = ASFinfo.Value;
-		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+	public async Task TestContains(string appid) {
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
 		Assert.Contains(new RedditGameEntry(appid, default(ERedditGameEntryKind), long.MaxValue), entries, new GameEntryIdentifierEqualityComparer());
 	}
 
 	[Fact]
-	public void TestMaintainOrder() {
-		JToken payload = ASFinfo.Value;
-		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+	public async Task TestMaintainOrder() {
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
 		int app762440 = Array.FindIndex(entries, static entry => entry.Identifier == "s/762440");
 		int app1601550 = Array.FindIndex(entries, static entry => entry.Identifier == "a/1601550");
 		Assert.InRange(app762440, 0, long.MaxValue);
@@ -42,9 +43,8 @@ public sealed class RedditHelperTests {
 	}
 
 	[Fact]
-	public void TestFreeToPlayParsing() {
-		JToken payload = ASFinfo.Value;
-		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+	public async Task TestFreeToPlayParsing() {
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
 		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
 		Assert.True(f2pEntry.IsFreeToPlay);
 
@@ -70,9 +70,8 @@ public sealed class RedditHelperTests {
 	}
 
 	[Fact]
-	public void TestDlcParsing() {
-		JToken payload = ASFinfo.Value;
-		RedditGameEntry[] entries = RedditHelper.LoadMessages(payload.Value<JObject>("data")!["children"]!);
+	public async Task TestDlcParsing() {
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
 		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
 		Assert.False(f2pEntry.IsForDlc);
 
@@ -97,14 +96,20 @@ public sealed class RedditHelperTests {
 		Assert.False(paidEntry.IsForDlc);
 	}
 
-	private static JToken LoadAsfinfoJson() {
+	private static async Task<RedditGameEntry[]> LoadAsfinfoEntries() {
 		Assembly assembly = Assembly.GetExecutingAssembly();
 
-		using Stream stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.ASFinfo.json")!;
+#pragma warning disable CA2007
+		await using Stream stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.ASFinfo.json")!;
+#pragma warning restore CA2007
+		JsonNode jsonNode = await JsonNode.ParseAsync(stream).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
 
+		return RedditHelper.LoadMessages(jsonNode["data"]?["children"]!);
+	}
+
+	private static async Task<string> ReadToEndAsync(Stream stream, CancellationToken cancellationToken) {
 		using StreamReader reader = new(stream);
-		using JsonTextReader jsonTextReader = new(reader);
 
-		return JToken.Load(jsonTextReader);
+		return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 	}
 }

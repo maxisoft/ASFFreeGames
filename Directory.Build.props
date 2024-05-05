@@ -3,8 +3,8 @@
 
 	<PropertyGroup>
 		<PluginName>ASFFreeGames</PluginName>
-		<Version>1.4.1.0</Version>
-		<TargetFramework>net7.0</TargetFramework>
+		<Version>1.5.1.0</Version>
+		<TargetFramework>net8.0</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
