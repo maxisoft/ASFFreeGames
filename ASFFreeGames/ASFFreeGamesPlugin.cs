@@ -127,6 +127,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 				Array.Sort(reorderedBots, comparison);
 			}
 
+			if (reorderedBots.Length == 0) {
+				ArchiLogger.LogGenericDebug("no viable bot found for freegame scheduled operation");
+
+				return;
+			}
+
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
 				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
