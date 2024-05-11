@@ -122,7 +122,7 @@ namespace ASFFreeGames.Commands {
 		}
 
 		private async Task<string?> HandleCollectCommand(Bot? bot) {
-			int collected = await CollectGames(bot is not null ? new[] { bot } : Context.Bots, ECollectGameRequestSource.RequestedByUser, Context.CancellationToken).ConfigureAwait(false);
+			int collected = await CollectGames(bot is not null ? [bot] : Context.Bots.ToArray(), ECollectGameRequestSource.RequestedByUser, Context.CancellationToken).ConfigureAwait(false);
 
 			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)");
 		}
@@ -134,10 +134,21 @@ namespace ASFFreeGames.Commands {
 		}
 
 		private async ValueTask<string?> HandleInternalCollectCommand(Bot? bot, string[] args, CancellationToken cancellationToken) {
-			Dictionary<string, Bot> botMap = Context.Bots.ToDictionary(static b => b.BotName, static b => b, StringComparer.InvariantCultureIgnoreCase);
-			int collected = await CollectGames(args.Skip(2).Select(botName => botMap[botName]), ECollectGameRequestSource.Scheduled, cancellationToken).ConfigureAwait(false);
+			Dictionary<string, Bot> botMap = Context.Bots.ToDictionary(static b => b.BotName.Trim(), static b => b, StringComparer.InvariantCultureIgnoreCase);
 
-			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)");
+			Bot[] bots = args.Skip(2).Select(botName => botMap.GetValueOrDefault(botName.Trim())).Where(static b => b is not null).ToArray()!;
+
+			if (bots.Length == 0) {
+				if (bot is null) {
+					return null;
+				}
+
+				bots = [bot];
+			}
+
+			int collected = await CollectGames(bots, ECollectGameRequestSource.Scheduled, cancellationToken).ConfigureAwait(false);
+
+			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)" + (bots.Length > 1 ? $" on {bots.Length} bots" : $" on {bots.FirstOrDefault()?.BotName}"));
 		}
 
 		private async Task SaveOptions(CancellationToken cancellationToken) {
