@@ -38,16 +38,7 @@ internal sealed partial class RedditHelper {
 			return result;
 		}
 
-		JsonNode jsonPayload;
-
-		try {
-			jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false);
-		}
-		catch (Exception e) when (e is InvalidOperationException or JsonException or IOException or RedditServerException) {
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"Unable to load json from reddit {e.GetType().Name}: {e.Message}");
-
-			return result;
-		}
+		JsonNode? jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 

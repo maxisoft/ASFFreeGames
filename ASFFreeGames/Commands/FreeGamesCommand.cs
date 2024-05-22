@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -202,7 +204,21 @@ namespace ASFFreeGames.Commands {
 			int res = 0;
 
 			try {
-				ICollection<RedditGameEntry> games = await RedditHelper.GetGames(cancellationToken).ConfigureAwait(false);
+				ICollection<RedditGameEntry> games;
+
+				try {
+					games = await RedditHelper.GetGames(cancellationToken).ConfigureAwait(false);
+				}
+				catch (Exception e) when (e is InvalidOperationException or JsonException or IOException or RedditServerException) {
+					if (Options.VerboseLog ?? false) {
+						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericException(e);
+					}
+					else {
+						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"Unable to load json from reddit {e.GetType().Name}: {e.Message}");
+					}
+
+					return 0;
+				}
 
 				LogNewGameCount(games, VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser);
 
