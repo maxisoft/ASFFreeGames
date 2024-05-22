@@ -164,7 +164,7 @@ internal sealed partial class RedditHelper {
 
 		for (int t = 0; t < retry; t++) {
 			try {
-				stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, maxTries: 1, cancellationToken: cancellationToken).ConfigureAwait(false);
+				stream = await webBrowser.UrlGetToStream(GetUrl(), maxTries: 1, cancellationToken: cancellationToken).ConfigureAwait(false);
 
 				if (stream?.Content is null) {
 					throw new RedditServerException("content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
