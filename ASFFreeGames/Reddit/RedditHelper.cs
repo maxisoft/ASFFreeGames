@@ -38,16 +38,13 @@ internal sealed partial class RedditHelper {
 			return result;
 		}
 
-		JsonNode jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
+		JsonNode jsonPayload;
 
 		try {
-			if ((jsonPayload["kind"]?.GetValue<string>() != "Listing") ||
-				jsonPayload["data"] is null) {
-				return result;
-			}
+			jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false);
 		}
-		catch (Exception e) when (e is FormatException or InvalidOperationException) {
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo("invalid json");
+		catch (Exception e) when (e is InvalidOperationException or JsonException or IOException or RedditServerException) {
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"Unable to load json from reddit {e.GetType().Name}: {e.Message}");
 
 			return result;
 		}
@@ -171,28 +168,46 @@ internal sealed partial class RedditHelper {
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async ValueTask<JsonNode?> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken, uint retry = 5) {
+	private static async ValueTask<JsonNode> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken, uint retry = 5) {
 		StreamResponse? stream = null;
 
 		for (int t = 0; t < retry; t++) {
 			try {
-				stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, cancellationToken: cancellationToken).ConfigureAwait(false);
+				stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, maxTries: 1, cancellationToken: cancellationToken).ConfigureAwait(false);
 
 				if (stream?.Content is null) {
-					throw new RedditServerException("Reddit server error: content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
+					throw new RedditServerException("content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
 				}
 
 				if (stream.StatusCode.IsServerErrorCode()) {
-					throw new RedditServerException($"Reddit server error: {stream.StatusCode}", stream.StatusCode);
+					throw new RedditServerException($"server error code is {stream.StatusCode}", stream.StatusCode);
 				}
 
-				return await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+				JsonNode? res = await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+
+				if (res is null) {
+					throw new RedditServerException("empty response", stream.StatusCode);
+				}
+
+				try {
+					if ((res["kind"]?.GetValue<string>() != "Listing") ||
+						res["data"] is null) {
+						throw new RedditServerException("invalid response", stream.StatusCode);
+					}
+				}
+				catch (Exception e) when (e is FormatException or InvalidOperationException) {
+					throw new RedditServerException("invalid response", stream.StatusCode);
+				}
+
+				return res;
 			}
 			catch (Exception e) when (e is JsonException or IOException or RedditServerException or HttpRequestException) {
-				// If no RedditServerException was thrown, re-throw the original Exception
+				// If it's the last retry, re-throw the original Exception
 				if (t + 1 == retry) {
 					throw;
 				}
+
+				cancellationToken.ThrowIfCancellationRequested();
 			}
 			finally {
 				if (stream is not null) {
@@ -202,11 +217,11 @@ internal sealed partial class RedditHelper {
 				stream = null;
 			}
 
-			await Task.Delay((2 << t) * 100, cancellationToken).ConfigureAwait(false);
+			await Task.Delay((2 << (t + 1)) * 100, cancellationToken).ConfigureAwait(false);
 			cancellationToken.ThrowIfCancellationRequested();
 		}
 
-		return JsonNode.Parse("{}");
+		return JsonNode.Parse("{}")!;
 	}
 
 	/// <summary>
