@@ -17,7 +17,7 @@ jobs:
     name: Keep the repo alive
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.5
+      - uses: actions/checkout@v4.1.6
         timeout-minutes: 5
       - uses: gautamkrishnar/keepalive-workflow@v2
         timeout-minutes: 5
