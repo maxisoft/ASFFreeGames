@@ -28,6 +28,8 @@ public static class ASFFreeGamesOptionsLoader {
 			options.SkipFreeToPlay = configurationRoot.GetValue("SkipFreeToPlay", options.SkipFreeToPlay);
 			options.SkipDLC = configurationRoot.GetValue("SkipDLC", options.SkipDLC);
 			options.RandomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckInterval", options.RandomizeRecheckInterval);
+			options.Proxy = configurationRoot.GetValue("Proxy", options.Proxy);
+			options.RedditProxy = configurationRoot.GetValue("RedditProxy", options.RedditProxy);
 		}
 		finally {
 			Semaphore.Release();
@@ -38,6 +40,7 @@ public static class ASFFreeGamesOptionsLoader {
 		IConfigurationRoot configurationRoot = new ConfigurationBuilder()
 			.SetBasePath(Path.GetFullPath(BasePath))
 			.AddJsonFile(DefaultJsonFile, true, false)
+			.AddEnvironmentVariables("FREEGAMES_")
 			.Build();
 
 		return configurationRoot;

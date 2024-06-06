@@ -42,6 +42,12 @@ public class ASFFreeGamesOptions {
 
 	public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
 	#endregion
+
+	#region proxy
+	[JsonPropertyName("proxy")]
+	public string? Proxy { get; set; }
+
+	[JsonPropertyName("redditProxy")]
+	public string? RedditProxy { get; set; }
+	#endregion
 }
-
-

@@ -8,7 +8,7 @@ using ASFFreeGames.Configurations;
 
 namespace ASFFreeGames.Commands {
 	// Implement the IBotCommand interface
-	internal sealed class CommandDispatcher(ASFFreeGamesOptions options) : IBotCommand {
+	internal sealed class CommandDispatcher(ASFFreeGamesOptions options) : IBotCommand, IDisposable {
 		// Declare a private field for the plugin options instance
 		private readonly ASFFreeGamesOptions Options = options ?? throw new ArgumentNullException(nameof(options));
 
@@ -50,6 +50,14 @@ namespace ASFFreeGames.Commands {
 			}
 
 			return null; // Return null if an exception occurs or if no command is found
+		}
+
+		public void Dispose() {
+			foreach ((_, IBotCommand? value) in Commands) {
+				if (value is IDisposable disposable) {
+					disposable.Dispose();
+				}
+			}
 		}
 	}
 }
