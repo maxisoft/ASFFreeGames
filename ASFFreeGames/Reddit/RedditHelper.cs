@@ -157,39 +157,45 @@ internal sealed partial class RedditHelper {
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
 	private static async ValueTask<JsonNode> GetPayload(SimpleHttpClient httpClient, CancellationToken cancellationToken, uint retry = 5) {
-		HttpStreamResponse? stream = null;
-		var headers = new Dictionary<string, string>();
-		headers.Add("Pragma", "no-cache");
-		headers.Add("Cache-Control", "no-cache");
-		headers.Add("Accept", "application/json");
-		headers.Add("Sec-Fetch-Site", "none");
-		headers.Add("Sec-Fetch-Mode", "no-cors");
-		headers.Add("Sec-Fetch-Dest", "empty");
+		HttpStreamResponse? response = null;
+
+		Dictionary<string, string> headers = new() {
+			{ "Pragma", "no-cache" },
+			{ "Cache-Control", "no-cache" },
+			{ "Accept", "application/json" },
+			{ "Sec-Fetch-Site", "none" },
+			{ "Sec-Fetch-Mode", "no-cors" },
+			{ "Sec-Fetch-Dest", "empty" }
+		};
 
 		for (int t = 0; t < retry; t++) {
 			try {
 #pragma warning disable CA2000
-				stream = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
+				response = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA2000
 
-				if (!stream.StatusCode.IsSuccessCode()) {
-					throw new RedditServerException($"reddit http error code is {stream.StatusCode}", stream.StatusCode);
+				if (await HandleTooManyRequest(response, cancellationToken: cancellationToken).ConfigureAwait(false)) {
+					continue;
 				}
 
-				JsonNode? res = await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+				if (!response.StatusCode.IsSuccessCode()) {
+					throw new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
+				}
+
+				JsonNode? res = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
 
 				if (res is null) {
-					throw new RedditServerException("empty response", stream.StatusCode);
+					throw new RedditServerException("empty response", response.StatusCode);
 				}
 
 				try {
 					if ((res["kind"]?.GetValue<string>() != "Listing") ||
 						res["data"] is null) {
-						throw new RedditServerException("invalid response", stream.StatusCode);
+						throw new RedditServerException("invalid response", response.StatusCode);
 					}
 				}
 				catch (Exception e) when (e is FormatException or InvalidOperationException) {
-					throw new RedditServerException("invalid response", stream.StatusCode);
+					throw new RedditServerException("invalid response", response.StatusCode);
 				}
 
 				return res;
@@ -203,11 +209,11 @@ internal sealed partial class RedditHelper {
 				cancellationToken.ThrowIfCancellationRequested();
 			}
 			finally {
-				if (stream is not null) {
-					await stream.DisposeAsync().ConfigureAwait(false);
+				if (response is not null) {
+					await response.DisposeAsync().ConfigureAwait(false);
 				}
 
-				stream = null;
+				response = null;
 			}
 
 			await Task.Delay((2 << (t + 1)) * 100, cancellationToken).ConfigureAwait(false);
@@ -215,6 +221,44 @@ internal sealed partial class RedditHelper {
 		}
 
 		return JsonNode.Parse("{}")!;
+	}
+
+	/// <summary>
+	/// Handles too many requests by checking the status code and headers of the response.
+	/// If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
+	/// and the reset time. If the remaining rate limit is less than or equal to 0, it delays
+	/// the execution until the reset time using the cancellation token.
+	/// </summary>
+	/// <param name="response">The HTTP stream response to handle.</param>
+	/// <param name="maxTimeToWait"></param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <returns>True if the request was handled & awaited, false otherwise.</returns>
+	private static async ValueTask<bool> HandleTooManyRequest(HttpStreamResponse response, int maxTimeToWait = 60, CancellationToken cancellationToken = default) {
+		if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests) {
+			if (response.Response.Headers.TryGetValues("x-ratelimit-remaining", out IEnumerable<string>? rateLimitRemaining)) {
+				if (int.TryParse(rateLimitRemaining.FirstOrDefault(), out int remaining) && (remaining <= 0)) {
+					if (response.Response.Headers.TryGetValues("x-ratelimit-reset", out IEnumerable<string>? rateLimitReset)
+						&& float.TryParse(rateLimitReset.FirstOrDefault(), out float reset) && double.IsNormal(reset) && (0 < reset) && (reset < maxTimeToWait)) {
+						try {
+							await Task.Delay(TimeSpan.FromSeconds(reset), cancellationToken).ConfigureAwait(false);
+						}
+						catch (TaskCanceledException) {
+							return false;
+						}
+						catch (TimeoutException) {
+							return false;
+						}
+						catch (OperationCanceledException) {
+							return false;
+						}
+					}
+
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/// <summary>
