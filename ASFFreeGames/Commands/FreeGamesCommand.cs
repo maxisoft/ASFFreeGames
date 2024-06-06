@@ -11,13 +11,20 @@ using ArchiSteamFarm.Steam;
 using ASFFreeGames.Configurations;
 using Maxisoft.ASF;
 using Maxisoft.ASF.Configurations;
+using Maxisoft.ASF.HttpClientSimple;
 using Maxisoft.ASF.Reddit;
 using SteamKit2;
 
 namespace ASFFreeGames.Commands {
 	// Implement the IBotCommand interface
-	internal sealed class FreeGamesCommand : IBotCommand, IDisposable {
-		public void Dispose() => SemaphoreSlim?.Dispose();
+	internal sealed class FreeGamesCommand(ASFFreeGamesOptions options) : IBotCommand, IDisposable {
+		public void Dispose() {
+			if (HttpFactory.IsValueCreated) {
+				HttpFactory.Value.Dispose();
+			}
+
+			SemaphoreSlim?.Dispose();
+		}
 
 		internal const string SaveOptionsInternalCommandString = "_SAVEOPTIONS";
 		internal const string CollectInternalCommandString = "_COLLECT";
@@ -25,10 +32,11 @@ namespace ASFFreeGames.Commands {
 		private static PluginContext Context => ASFFreeGamesPlugin.Context;
 
 		// Declare a private field for the plugin options instance
-		private ASFFreeGamesOptions Options;
+		private ASFFreeGamesOptions Options = options ?? throw new ArgumentNullException(nameof(options));
+
+		private readonly Lazy<SimpleHttpClientFactory> HttpFactory = new(() => new SimpleHttpClientFactory(options));
 
 		// Define a constructor that takes an plugin options instance as a parameter
-		public FreeGamesCommand(ASFFreeGamesOptions options) => Options = options ?? throw new ArgumentNullException(nameof(options));
 
 		/// <inheritdoc />
 		/// <summary>
@@ -207,7 +215,9 @@ namespace ASFFreeGames.Commands {
 				ICollection<RedditGameEntry> games;
 
 				try {
-					games = await RedditHelper.GetGames(cancellationToken).ConfigureAwait(false);
+#pragma warning disable CA2000
+					games = await RedditHelper.GetGames(HttpFactory.Value.CreateForReddit(), cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA2000
 				}
 				catch (Exception e) when (e is InvalidOperationException or JsonException or IOException or RedditServerException) {
 					if (Options.VerboseLog ?? false) {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,6 +17,7 @@ using ArchiSteamFarm.Helpers.Json;
 using ArchiSteamFarm.Web;
 using ArchiSteamFarm.Web.Responses;
 using BloomFilter;
+using Maxisoft.ASF.HttpClientSimple;
 using Maxisoft.Utils.Collections.Spans;
 
 namespace Maxisoft.ASF.Reddit;
@@ -30,15 +32,10 @@ internal sealed partial class RedditHelper {
 	/// Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(CancellationToken cancellationToken) {
-		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
+	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, CancellationToken cancellationToken) {
 		RedditGameEntry[] result = Array.Empty<RedditGameEntry>();
 
-		if (webBrowser is null) {
-			return result;
-		}
-
-		JsonNode? jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false);
+		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
@@ -153,25 +150,30 @@ internal sealed partial class RedditHelper {
 	/// <summary>
 	/// Tries to get a JSON object from Reddit.
 	/// </summary>
-	/// <param name="webBrowser">The web browser instance to use.</param>
+	/// <param name="httpClient">The http client instance to use.</param>
 	/// <param name="cancellationToken"></param>
 	/// <param name="retry"></param>
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async ValueTask<JsonNode> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken, uint retry = 5) {
-		StreamResponse? stream = null;
+	private static async ValueTask<JsonNode> GetPayload(SimpleHttpClient httpClient, CancellationToken cancellationToken, uint retry = 5) {
+		HttpStreamResponse? stream = null;
+		var headers = new Dictionary<string, string>();
+		headers.Add("Pragma", "no-cache");
+		headers.Add("Cache-Control", "no-cache");
+		headers.Add("Accept", "application/json");
+		headers.Add("Sec-Fetch-Site", "none");
+		headers.Add("Sec-Fetch-Mode", "no-cors");
+		headers.Add("Sec-Fetch-Dest", "empty");
 
 		for (int t = 0; t < retry; t++) {
 			try {
-				stream = await webBrowser.UrlGetToStream(GetUrl(), rateLimitingDelay: 500, maxTries: 1, cancellationToken: cancellationToken).ConfigureAwait(false);
+#pragma warning disable CA2000
+				stream = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA2000
 
-				if (stream?.Content is null) {
-					throw new RedditServerException("content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
-				}
-
-				if (stream.StatusCode.IsServerErrorCode()) {
-					throw new RedditServerException($"server error code is {stream.StatusCode}", stream.StatusCode);
+				if (!stream.StatusCode.IsSuccessCode()) {
+					throw new RedditServerException($"reddit http error code is {stream.StatusCode}", stream.StatusCode);
 				}
 
 				JsonNode? res = await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
@@ -221,9 +223,10 @@ internal sealed partial class RedditHelper {
 	/// <param name="stream">The stream response containing the JSON data.</param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
-	private static async Task<JsonNode?> ParseJsonNode(StreamResponse stream, CancellationToken cancellationToken) {
-		using StreamReader reader = new(stream.Content!, Encoding.UTF8);
+	private static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
+		string data = await stream.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug($"Response: {data}");
 
-		return JsonNode.Parse(await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false));
+		return JsonNode.Parse(data);
 	}
 }
