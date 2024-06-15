@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -31,18 +32,25 @@ public sealed class SimpleHttpClient : IDisposable {
 		}
 
 		HttpClient = new HttpClient(HttpClientHandler, false) { Timeout = TimeSpan.FromMilliseconds(timeout) };
+		HttpClient.DefaultRequestVersion = HttpVersion.Version30;
+		HttpClient.DefaultRequestHeaders.ExpectContinue = false;
 
 		HttpClient.DefaultRequestHeaders.Add("User-Agent", "Lynx/2.8.8dev.9 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/2.12.14");
-		HttpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+		HttpClient.DefaultRequestHeaders.Add("DNT", "1");
+		HttpClient.DefaultRequestHeaders.Add("Sec-GPC", "1");
+
+		HttpClient.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("en-US"));
+		HttpClient.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("en", 0.8));
 	}
 
 	public async Task<HttpStreamResponse> GetStreamAsync(Uri uri, IEnumerable<KeyValuePair<string, string>>? additionalHeaders = null, CancellationToken cancellationToken = default) {
 		using HttpRequestMessage request = new(HttpMethod.Get, uri);
+		request.Version = HttpClient.DefaultRequestVersion;
 
 		// Add additional headers if provided
 		if (additionalHeaders != null) {
 			foreach (KeyValuePair<string, string> header in additionalHeaders) {
-				request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+				request.Headers.Add(header.Key, header.Value);
 			}
 		}
 

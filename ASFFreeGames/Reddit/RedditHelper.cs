@@ -165,7 +165,10 @@ internal sealed partial class RedditHelper {
 			{ "Accept", "application/json" },
 			{ "Sec-Fetch-Site", "none" },
 			{ "Sec-Fetch-Mode", "no-cors" },
-			{ "Sec-Fetch-Dest", "empty" }
+			{ "Sec-Fetch-Dest", "empty" },
+			{ "x-sec-fetch-dest", "empty" },
+			{ "x-sec-fetch-mode", "no-cors" },
+			{ "x-sec-fetch-site", "none" },
 		};
 
 		for (int t = 0; t < retry; t++) {
@@ -233,7 +236,7 @@ internal sealed partial class RedditHelper {
 	/// <param name="maxTimeToWait"></param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>True if the request was handled & awaited, false otherwise.</returns>
-	private static async ValueTask<bool> HandleTooManyRequest(HttpStreamResponse response, int maxTimeToWait = 60, CancellationToken cancellationToken = default) {
+	private static async ValueTask<bool> HandleTooManyRequest(HttpStreamResponse response, int maxTimeToWait = 45, CancellationToken cancellationToken = default) {
 		if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests) {
 			if (response.Response.Headers.TryGetValues("x-ratelimit-remaining", out IEnumerable<string>? rateLimitRemaining)) {
 				if (int.TryParse(rateLimitRemaining.FirstOrDefault(), out int remaining) && (remaining <= 0)) {
@@ -269,7 +272,6 @@ internal sealed partial class RedditHelper {
 	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
 	private static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
 		string data = await stream.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug($"Response: {data}");
 
 		return JsonNode.Parse(data);
 	}
