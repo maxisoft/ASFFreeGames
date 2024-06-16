@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using Maxisoft.ASF.Reddit;
+using Maxisoft.Utils.Collections.Dictionaries;
 
 namespace Maxisoft.ASF.Redlib.Html;
 
@@ -39,8 +41,8 @@ internal readonly record struct ParserIndices(int StartOfCommandIndex, int EndOf
 public static class RedlibHtmlParser {
 	private const int MaxIdentifierPerEntry = 32;
 
-	public static IReadOnlyList<GameEntry> ParseGamesFromHtml(ReadOnlySpan<char> html) {
-		List<GameEntry> entries = [];
+	public static IReadOnlyCollection<GameEntry> ParseGamesFromHtml(ReadOnlySpan<char> html, bool dedup = true) {
+		OrderedDictionary<GameEntry, EmptyStruct> entries = new(dedup ? new GameIdentifiersEqualityComparer() : EqualityComparer<GameEntry>.Default);
 		int startIndex = 0;
 
 		Span<GameIdentifier> gameIdentifiers = stackalloc GameIdentifier[MaxIdentifierPerEntry];
@@ -68,7 +70,14 @@ public static class RedlibHtmlParser {
 				EGameType flag = ParseGameTypeFlags(html[indices.StartOfCommandIndex..indices.StartOfFooterIndex]);
 
 				ReadOnlySpan<char> title = ExtractTitle(html, indices);
-				entries.Add(new GameEntry(effectiveGameIdentifiers.ToArray(), title.ToString(), flag));
+				GameEntry entry = new(effectiveGameIdentifiers.ToArray(), title.ToString(), flag);
+
+				try {
+					entries.Add(entry, default(EmptyStruct));
+				}
+				catch (ArgumentException e) {
+					throw new SkipAndContinueParsingException("entry already found", e) { StartIndex = startOfCommandIndex + 1 };
+				}
 			}
 			catch (SkipAndContinueParsingException e) {
 				startIndex = e.StartIndex;
@@ -79,7 +88,7 @@ public static class RedlibHtmlParser {
 			startIndex = indices.StartOfFooterIndex + 1;
 		}
 
-		return entries;
+		return (IReadOnlyCollection<GameEntry>) entries.Keys;
 	}
 
 	internal static ReadOnlySpan<char> ExtractTitle(ReadOnlySpan<char> html, ParserIndices indices) {
@@ -177,7 +186,7 @@ public static class RedlibHtmlParser {
 
 		// now we have a kind of typical ASFInfo post
 
-		// Extract the comment link and validate the entry
+		// Extract the comment link
 		int commandEndIndex = html[startIndex..infoFooterStartIndex].IndexOf("</code>", StringComparison.InvariantCultureIgnoreCase);
 
 		if (commandEndIndex < 0) {
@@ -231,6 +240,35 @@ public static class RedlibHtmlParser {
 
 #pragma warning disable CA1819
 public readonly record struct GameEntry(IReadOnlyCollection<GameIdentifier> GameIdentifiers, string CommentLink, EGameType TypeFlags) { }
+
+public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<GameEntry> {
+	public bool Equals(GameEntry x, GameEntry y) {
+		if (x.GameIdentifiers.Count != y.GameIdentifiers.Count) {
+			return false;
+		}
+
+		using IEnumerator<GameIdentifier> xIt = x.GameIdentifiers.GetEnumerator();
+		using IEnumerator<GameIdentifier> yIt = y.GameIdentifiers.GetEnumerator();
+
+		while (xIt.MoveNext() && yIt.MoveNext()) {
+			if (!xIt.Current.Equals(yIt.Current)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	public int GetHashCode(GameEntry obj) {
+		HashCode h = new();
+
+		foreach (GameIdentifier id in obj.GameIdentifiers) {
+			h.Add(id);
+		}
+
+		return h.ToHashCode();
+	}
+}
 #pragma warning restore CA1819
 
 [Flags]

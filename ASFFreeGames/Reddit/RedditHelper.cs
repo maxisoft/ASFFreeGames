@@ -24,7 +24,7 @@ internal sealed class RedditHelper {
 	///     Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(CancellationToken cancellationToken) {
+	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(CancellationToken cancellationToken) {
 		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
 
 		// ReSharper disable once UseCollectionExpression
@@ -41,15 +41,15 @@ internal sealed class RedditHelper {
 		return childrenElement is null ? result : LoadMessages(childrenElement);
 	}
 
-	internal static ICollection<RedditGameEntry> LoadMessages(JsonNode children) {
+	internal static IReadOnlyCollection<RedditGameEntry> LoadMessages(JsonNode children) {
 		OrderedDictionary<RedditGameEntry, EmptyStruct> games = new(new GameEntryIdentifierEqualityComparer());
 
-		ICollection<RedditGameEntry> returnValue() {
+		IReadOnlyCollection<RedditGameEntry> returnValue() {
 			while (games.Count is > 0 and > MaxGameEntry) {
 				games.RemoveAt((^1).GetOffset(games.Count));
 			}
 
-			return games.Keys;
+			return (IReadOnlyCollection<RedditGameEntry>) games.Keys;
 		}
 
 		// ReSharper disable once LoopCanBePartlyConvertedToQuery

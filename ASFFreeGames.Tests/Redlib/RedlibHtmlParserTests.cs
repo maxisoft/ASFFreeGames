@@ -12,9 +12,16 @@ public class RedlibHtmlParserTests {
 	[Fact]
 	public async void Test() {
 		string html = await LoadHtml().ConfigureAwait(false);
-		IReadOnlyList<GameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html);
+
+		// ReSharper disable once ArgumentsStyleLiteral
+		IReadOnlyCollection<GameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: false);
 		Assert.NotEmpty(result);
 		Assert.Equal(25, result.Count);
+
+// ReSharper disable once ArgumentsStyleLiteral
+		result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: true);
+		Assert.NotEmpty(result);
+		Assert.Equal(13, result.Count);
 	}
 
 	private static async Task<string> LoadHtml() {

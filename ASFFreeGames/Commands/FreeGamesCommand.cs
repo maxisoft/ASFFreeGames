@@ -204,7 +204,7 @@ namespace ASFFreeGames.Commands {
 			int res = 0;
 
 			try {
-				ICollection<RedditGameEntry> games;
+				IReadOnlyCollection<RedditGameEntry> games;
 
 				try {
 					games = await RedditHelper.GetGames(cancellationToken).ConfigureAwait(false);
@@ -334,7 +334,7 @@ namespace ASFFreeGames.Commands {
 			return res;
 		}
 
-		private void LogNewGameCount(ICollection<RedditGameEntry> games, bool logZero = false) {
+		private void LogNewGameCount(IReadOnlyCollection<RedditGameEntry> games, bool logZero = false) {
 			int totalAppIdCounter = PreviouslySeenAppIds.Count;
 			int newGameCounter = 0;
 

@@ -335,7 +335,7 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		protected void CheckForOutOfBounds(int index) => CheckForOutOfBounds(index, nameof(index));
 
-		protected class KeyCollection<TDict> : ICollection<TKey>
+		protected class KeyCollection<TDict> : ICollection<TKey>, IReadOnlyCollection<TKey>
 			where TDict : OrderedDictionary<TKey, TValue, TList, TDictionary> {
 			private readonly TDict Dictionary;
 
