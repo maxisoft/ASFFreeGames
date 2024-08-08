@@ -1,23 +1,17 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Core;
-using ArchiSteamFarm.Web;
-using ArchiSteamFarm.Web.Responses;
-using Maxisoft.Utils.Collections.Dictionaries;
 using Maxisoft.ASF.HttpClientSimple;
-using Maxisoft.Utils.Collections.Spans;
+using Maxisoft.Utils.Collections.Dictionaries;
 
 namespace Maxisoft.ASF.Reddit;
 
@@ -30,13 +24,11 @@ internal sealed class RedditHelper {
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
 	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, CancellationToken cancellationToken) {
-		RedditGameEntry[] result = Array.Empty<RedditGameEntry>();
-
 		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
-		return childrenElement is null ? result : LoadMessages(childrenElement);
+		return childrenElement is null ? [] : LoadMessages(childrenElement);
 	}
 
 	internal static ICollection<RedditGameEntry> LoadMessages(JsonNode children) {
@@ -44,7 +36,7 @@ internal sealed class RedditHelper {
 
 		ICollection<RedditGameEntry> returnValue() {
 			while (games.Count is > 0 and > MaxGameEntry) {
-				games.RemoveAt((^1).GetOffset(games.Count));
+				games.RemoveAt(games.Count - 1);
 			}
 
 			return games.Keys;
@@ -141,7 +133,7 @@ internal sealed class RedditHelper {
 			{ "Sec-Fetch-Dest", "empty" },
 			{ "x-sec-fetch-dest", "empty" },
 			{ "x-sec-fetch-mode", "no-cors" },
-			{ "x-sec-fetch-site", "none" },
+			{ "x-sec-fetch-site", "none" }
 		};
 
 		for (int t = 0; t < retry; t++) {
@@ -199,11 +191,13 @@ internal sealed class RedditHelper {
 		return JsonNode.Parse("{}")!;
 	}
 
+	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
+
 	/// <summary>
-	/// Handles too many requests by checking the status code and headers of the response.
-	/// If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
-	/// and the reset time. If the remaining rate limit is less than or equal to 0, it delays
-	/// the execution until the reset time using the cancellation token.
+	///     Handles too many requests by checking the status code and headers of the response.
+	///     If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
+	///     and the reset time. If the remaining rate limit is less than or equal to 0, it delays
+	///     the execution until the reset time using the cancellation token.
 	/// </summary>
 	/// <param name="response">The HTTP stream response to handle.</param>
 	/// <param name="maxTimeToWait"></param>
@@ -248,6 +242,4 @@ internal sealed class RedditHelper {
 
 		return JsonNode.Parse(data);
 	}
-
-	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 }
