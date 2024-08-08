@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -13,6 +16,8 @@ using ArchiSteamFarm.Core;
 using ArchiSteamFarm.Web;
 using ArchiSteamFarm.Web.Responses;
 using Maxisoft.Utils.Collections.Dictionaries;
+using Maxisoft.ASF.HttpClientSimple;
+using Maxisoft.Utils.Collections.Spans;
 
 namespace Maxisoft.ASF.Reddit;
 
@@ -24,17 +29,10 @@ internal sealed class RedditHelper {
 	///     Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(CancellationToken cancellationToken) {
-		WebBrowser? webBrowser = ArchiSteamFarm.Core.ASF.WebBrowser;
-
-		// ReSharper disable once UseCollectionExpression
+	public static async ValueTask<ICollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, CancellationToken cancellationToken) {
 		RedditGameEntry[] result = Array.Empty<RedditGameEntry>();
 
-		if (webBrowser is null) {
-			return result;
-		}
-
-		JsonNode? jsonPayload = await GetPayload(webBrowser, cancellationToken).ConfigureAwait(false);
+		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
@@ -125,41 +123,55 @@ internal sealed class RedditHelper {
 	/// <summary>
 	///     Tries to get a JSON object from Reddit.
 	/// </summary>
-	/// <param name="webBrowser">The web browser instance to use.</param>
+	/// <param name="httpClient">The http client instance to use.</param>
 	/// <param name="cancellationToken"></param>
 	/// <param name="retry"></param>
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async ValueTask<JsonNode> GetPayload(WebBrowser webBrowser, CancellationToken cancellationToken, uint retry = 5) {
-		StreamResponse? stream = null;
+	private static async ValueTask<JsonNode> GetPayload(SimpleHttpClient httpClient, CancellationToken cancellationToken, uint retry = 5) {
+		HttpStreamResponse? response = null;
+
+		Dictionary<string, string> headers = new() {
+			{ "Pragma", "no-cache" },
+			{ "Cache-Control", "no-cache" },
+			{ "Accept", "application/json" },
+			{ "Sec-Fetch-Site", "none" },
+			{ "Sec-Fetch-Mode", "no-cors" },
+			{ "Sec-Fetch-Dest", "empty" },
+			{ "x-sec-fetch-dest", "empty" },
+			{ "x-sec-fetch-mode", "no-cors" },
+			{ "x-sec-fetch-site", "none" },
+		};
 
 		for (int t = 0; t < retry; t++) {
 			try {
-				stream = await webBrowser.UrlGetToStream(GetUrl(), maxTries: 1, cancellationToken: cancellationToken).ConfigureAwait(false);
+#pragma warning disable CA2000
+				response = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA2000
 
-				if (stream?.Content is null) {
-					throw new RedditServerException("content is null", stream?.StatusCode ?? HttpStatusCode.InternalServerError);
+				if (await HandleTooManyRequest(response, cancellationToken: cancellationToken).ConfigureAwait(false)) {
+					continue;
 				}
 
-				if (stream.StatusCode.IsServerErrorCode()) {
-					throw new RedditServerException($"server error code is {stream.StatusCode}", stream.StatusCode);
+				if (!response.StatusCode.IsSuccessCode()) {
+					throw new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
 				}
 
-				JsonNode? res = await ParseJsonNode(stream, cancellationToken).ConfigureAwait(false);
+				JsonNode? res = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
 
 				if (res is null) {
-					throw new RedditServerException("empty response", stream.StatusCode);
+					throw new RedditServerException("empty response", response.StatusCode);
 				}
 
 				try {
 					if ((res["kind"]?.GetValue<string>() != "Listing") ||
 						res["data"] is null) {
-						throw new RedditServerException("invalid response", stream.StatusCode);
+						throw new RedditServerException("invalid response", response.StatusCode);
 					}
 				}
 				catch (Exception e) when (e is FormatException or InvalidOperationException) {
-					throw new RedditServerException("invalid response", stream.StatusCode);
+					throw new RedditServerException("invalid response", response.StatusCode);
 				}
 
 				return res;
@@ -173,11 +185,11 @@ internal sealed class RedditHelper {
 				cancellationToken.ThrowIfCancellationRequested();
 			}
 			finally {
-				if (stream is not null) {
-					await stream.DisposeAsync().ConfigureAwait(false);
+				if (response is not null) {
+					await response.DisposeAsync().ConfigureAwait(false);
 				}
 
-				stream = null;
+				response = null;
 			}
 
 			await Task.Delay((2 << (t + 1)) * 100, cancellationToken).ConfigureAwait(false);
@@ -187,7 +199,43 @@ internal sealed class RedditHelper {
 		return JsonNode.Parse("{}")!;
 	}
 
-	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
+	/// <summary>
+	/// Handles too many requests by checking the status code and headers of the response.
+	/// If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
+	/// and the reset time. If the remaining rate limit is less than or equal to 0, it delays
+	/// the execution until the reset time using the cancellation token.
+	/// </summary>
+	/// <param name="response">The HTTP stream response to handle.</param>
+	/// <param name="maxTimeToWait"></param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <returns>True if the request was handled & awaited, false otherwise.</returns>
+	private static async ValueTask<bool> HandleTooManyRequest(HttpStreamResponse response, int maxTimeToWait = 45, CancellationToken cancellationToken = default) {
+		if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests) {
+			if (response.Response.Headers.TryGetValues("x-ratelimit-remaining", out IEnumerable<string>? rateLimitRemaining)) {
+				if (int.TryParse(rateLimitRemaining.FirstOrDefault(), out int remaining) && (remaining <= 0)) {
+					if (response.Response.Headers.TryGetValues("x-ratelimit-reset", out IEnumerable<string>? rateLimitReset)
+						&& float.TryParse(rateLimitReset.FirstOrDefault(), out float reset) && double.IsNormal(reset) && (0 < reset) && (reset < maxTimeToWait)) {
+						try {
+							await Task.Delay(TimeSpan.FromSeconds(reset), cancellationToken).ConfigureAwait(false);
+						}
+						catch (TaskCanceledException) {
+							return false;
+						}
+						catch (TimeoutException) {
+							return false;
+						}
+						catch (OperationCanceledException) {
+							return false;
+						}
+					}
+
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	///     Parses a JSON object from a stream response. Using not straightforward for ASF trimmed compatibility reasons
@@ -195,9 +243,11 @@ internal sealed class RedditHelper {
 	/// <param name="stream">The stream response containing the JSON data.</param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
-	private static async Task<JsonNode?> ParseJsonNode(StreamResponse stream, CancellationToken cancellationToken) {
-		using StreamReader reader = new(stream.Content!, Encoding.UTF8);
+	private static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
+		string data = await stream.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-		return JsonNode.Parse(await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false));
+		return JsonNode.Parse(data);
 	}
+
+	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 }

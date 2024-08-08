@@ -32,7 +32,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4.1.6
+      uses: actions/checkout@v4.1.7
       timeout-minutes: 5
       with:
         submodules: recursive
@@ -113,7 +113,7 @@ jobs:
     - name: Upload stdout
       continue-on-error: true
       if: always()
-      uses: actions/upload-artifact@v4.3.3
+      uses: actions/upload-artifact@v4.3.6
       with:
         name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
         path: out.txt
