@@ -1,12 +1,14 @@
 name: Integration Test
 
-on: 
+on:
   push:
     branches:
       - main
       - dev
   schedule:
     - cron: '55 22 */3 * *'
+
+  workflow_dispatch:
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -21,7 +23,7 @@ jobs:
   integration:
     concurrency:
       group: integration
-    if: github.actor == github.repository_owner
+    if: ${{ github.actor == github.repository_owner }}
     strategy:
       max-parallel: 1 # only 1 else asf may crash due to parallel login using the same config file
       matrix:
@@ -75,7 +77,7 @@ jobs:
     - name: run docker
       shell: python
       timeout-minutes: 60
-      run: | 
+      run: |
         import subprocess
         import sys
 
@@ -109,13 +111,26 @@ jobs:
                 sys.exit(exit_code)
             sys.exit(111)
 
+    - name: compress artifact files
+      continue-on-error: true
+      if: always()
+      run: |
+          mkdir -p tmp_7z
+          openssl rand -base64 32 | tr -d '\r\n' > tmp_7z/archive_pass.txt
+          echo ::add-mask::$(cat archive_pass.txt)
+          if [[ -z "${{ secrets.SEVENZIP_PASSWORD }}" ]]; then
+            export SEVENZIP_PASSWORD="$(cat archive_pass.txt)"
+            echo "**One must set SEVENZIP_PASSWORD seceret**" >> $GITHUB_STEP_SUMMARY
+            echo "- output.7z created with a random password good luck guessing ..." >> $GITHUB_STEP_SUMMARY
+          fi
+          7z a -t7z -m0=lzma2 -mx=9 -mhe=on -ms=on -p"${{ secrets.SEVENZIP_PASSWORD || env.SEVENZIP_PASSWORD }}" tmp_7z/output.7z config.zip out.txt
 
-    - name: Upload stdout
+    - name: Upload 7z artifact
       continue-on-error: true
       if: always()
       uses: actions/upload-artifact@v4.3.6
       with:
         name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
-        path: out.txt
+        path: tmp_7z/output.7z
 
 
