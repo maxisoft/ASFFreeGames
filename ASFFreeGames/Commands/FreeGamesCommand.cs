@@ -212,7 +212,7 @@ namespace ASFFreeGames.Commands {
 			int res = 0;
 
 			try {
-				ICollection<RedditGameEntry> games;
+				IReadOnlyCollection<RedditGameEntry> games;
 
 				try {
 #pragma warning disable CA2000
@@ -256,7 +256,7 @@ namespace ASFFreeGames.Commands {
 						continue;
 					}
 
-					foreach ((string? identifier, long time, bool freeToPlay, bool dlc) in games) {
+					foreach ((string identifier, long time, bool freeToPlay, bool dlc) in games) {
 						if (freeToPlay && Options.SkipFreeToPlay is true) {
 							continue;
 						}
@@ -265,7 +265,7 @@ namespace ASFFreeGames.Commands {
 							continue;
 						}
 
-						if (identifier is null || !GameIdentifier.TryParse(identifier, out var gid)) {
+						if (string.IsNullOrWhiteSpace(identifier) || !GameIdentifier.TryParse(identifier, out GameIdentifier gid)) {
 							continue;
 						}
 
@@ -344,7 +344,7 @@ namespace ASFFreeGames.Commands {
 			return res;
 		}
 
-		private void LogNewGameCount(ICollection<RedditGameEntry> games, bool logZero = false) {
+		private void LogNewGameCount(IReadOnlyCollection<RedditGameEntry> games, bool logZero = false) {
 			int totalAppIdCounter = PreviouslySeenAppIds.Count;
 			int newGameCounter = 0;
 
