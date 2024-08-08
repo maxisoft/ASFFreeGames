@@ -20,6 +20,54 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Include="..\.github\CODE_OF_CONDUCT.md">
+	    <Link>.github\CODE_OF_CONDUCT.md</Link>
+	  </Content>
+	  <Content Include="..\.github\CONTRIBUTING.md">
+	    <Link>.github\CONTRIBUTING.md</Link>
+	  </Content>
+	  <Content Include="..\.github\dependabot.yml">
+	    <Link>.github\dependabot.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\FUNDING.yml">
+	    <Link>.github\FUNDING.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\ISSUE_TEMPLATE\bug_report.md">
+	    <Link>.github\ISSUE_TEMPLATE\bug_report.md</Link>
+	  </Content>
+	  <Content Include="..\.github\ISSUE_TEMPLATE\feature_request.md">
+	    <Link>.github\ISSUE_TEMPLATE\feature_request.md</Link>
+	  </Content>
+	  <Content Include="..\.github\PULL_REQUEST_TEMPLATE.md">
+	    <Link>.github\PULL_REQUEST_TEMPLATE.md</Link>
+	  </Content>
+	  <Content Include="..\.github\RELEASE_TEMPLATE.md">
+	    <Link>.github\RELEASE_TEMPLATE.md</Link>
+	  </Content>
+	  <Content Include="..\.github\renovate.json5">
+	    <Link>.github\renovate.json5</Link>
+	  </Content>
+	  <Content Include="..\.github\SECURITY.md">
+	    <Link>.github\SECURITY.md</Link>
+	  </Content>
+	  <Content Include="..\.github\SUPPORT.md">
+	    <Link>.github\SUPPORT.md</Link>
+	  </Content>
+	  <Content Include="..\.github\workflows\bump-asf-reference.yml">
+	    <Link>.github\workflows\bump-asf-reference.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\workflows\ci.yml">
+	    <Link>.github\workflows\ci.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\workflows\keepalive.yml">
+	    <Link>.github\workflows\keepalive.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\workflows\publish.yml">
+	    <Link>.github\workflows\publish.yml</Link>
+	  </Content>
+	  <Content Include="..\.github\workflows\test_integration.yml">
+	    <Link>.github\workflows\test_integration.yml</Link>
+	  </Content>
 	  <Content Include="..\Directory.Build.props">
 	    <Link>Directory.Build.props</Link>
 	  </Content>

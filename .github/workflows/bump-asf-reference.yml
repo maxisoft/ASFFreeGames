@@ -53,11 +53,11 @@ jobs:
 
         if ! git diff --cached --quiet; then
             if ! git config --get user.email > /dev/null; then
-                git config --local user.email "action@github.com"
+                git config --local user.email "${{ github.repository_owner }}@users.noreply.github.com"
             fi
 
             if ! git config --get user.name > /dev/null; then
-                git config --local user.name "GitHub Action"
+                git config --local user.name "${{ github.repository_owner }}"
             fi
 
             git commit -m "Automatic ArchiSteamFarm reference update to ${LATEST_ASF_RELEASE}"
