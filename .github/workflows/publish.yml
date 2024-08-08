@@ -22,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4.1.6
+      uses: actions/checkout@v4.1.7
       with:
         submodules: recursive
 
@@ -172,13 +172,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4.1.6
+      uses: actions/checkout@v4.1.7
 
     # TODO: It'd be perfect if we could match final artifacts to the platform they target, so e.g. linux build comes from the linux machine
     # However, that is currently impossible due to https://github.com/dotnet/msbuild/issues/3897
     # Therefore, we'll (sadly) pull artifacts from Windows machine only for now
     - name: Download generic artifact from windows-latest
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v4.1.8
       with:
         name: windows-latest_${{ env.PLUGIN_NAME }}-generic
         path: out

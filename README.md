@@ -37,6 +37,27 @@ The plugin behavior is configurable via command
 
 In addition to the command above, the configuration is stored in a 📖```config/freegames.json.config``` json file, one may 🖊 edit it using a text editor to suit its need.
 
+**Proxy Setup**
+
+The plugin can be configured to use a proxy (HTTP(S), SOCKS4 or SOCKS5) for its HTTP requests to Reddit. You can achieve this in two ways:
+
+1. **Environment Variable:** Set the environment variable `FREEGAMES_RedditProxy` with your desired proxy URL (e.g., `http://yourproxy:port`).
+2. **`freegames.json.config`:** Edit the `redditProxy` property within the JSON configuration file located at `<asf>/config/freegames.json.config`. Set the value to your proxy URL.
+
+**Example `freegames.json.config` with Proxy:**
+
+```json
+{
+   ...
+  "redditProxy": "http://127.0.0.1:1080"
+}
+```
+
+**Important Note:** If you pass a proxy **password**, it will be **stored in clear text** in the `freegames.json.config` file, even when passing it via the environment variable. 
+
+**Note:** Whichever method you choose (environment variable or config file), only one will be used at a time. 
+The environment variable takes precedence over the config file setting.
+
 
 ## FAQ
 
