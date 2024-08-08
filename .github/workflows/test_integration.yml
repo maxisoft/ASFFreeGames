@@ -116,7 +116,7 @@ jobs:
       if: always()
       run: |
           mkdir -p tmp_7z
-          openssl rand -base64 32 | tr -d '\r\n' > tmp_7z/archive_pass.txt
+          openssl rand -base64 32 | tr -d '\r\n' > archive_pass.txt
           echo ::add-mask::$(cat archive_pass.txt)
           if [[ -z "${{ secrets.SEVENZIP_PASSWORD }}" ]]; then
             export SEVENZIP_PASSWORD="$(cat archive_pass.txt)"
