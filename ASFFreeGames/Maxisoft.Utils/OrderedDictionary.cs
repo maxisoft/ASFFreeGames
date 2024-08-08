@@ -106,7 +106,7 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 		/// <param name="key">the key to add.</param>
 		/// <param name="value">the value to end.</param>
 		/// <exception cref="T:System.ArgumentException">when the <c>key</c> already exists.</exception>
-		public void Add(TKey key, TValue value) => DoAdd(in key, in value);
+		public void Add(TKey key, TValue value) => DoAdd(key, value);
 
 		public bool ContainsKey(TKey key) => Dictionary.ContainsKey(key);
 
@@ -130,7 +130,7 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 
 		public TValue this[TKey key] {
 			get => Dictionary[key];
-			set => DoAdd(in key, in value, true);
+			set => DoAdd(key, value, true);
 		}
 
 		public ICollection<TKey> Keys => new KeyCollection<OrderedDictionary<TKey, TValue, TList, TDictionary>>(this);
@@ -297,7 +297,7 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 			Dictionary[key] = value;
 		}
 
-		protected void DoAdd(in TKey key, in TValue value, bool upsert = false) {
+		protected void DoAdd(TKey key, TValue value, bool upsert = false) {
 			if (Dictionary.ContainsKey(key)) {
 				if (!upsert) {
 					throw new ArgumentException("key already exists", nameof(key));
@@ -317,9 +317,6 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 				Indexes.RemoveAt(Indexes.Count - 1);
 
 				throw;
-			}
-			finally {
-				Debug.Assert(Dictionary.Count == Indexes.Count);
 			}
 		}
 

@@ -24,14 +24,11 @@ internal sealed class RedditHelper {
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
 	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, CancellationToken cancellationToken) {
-		// ReSharper disable once UseCollectionExpression
-		RedditGameEntry[] result = Array.Empty<RedditGameEntry>();
-
 		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
-		return childrenElement is null ? result : LoadMessages(childrenElement);
+		return childrenElement is null ? [] : LoadMessages(childrenElement);
 	}
 
 	internal static IReadOnlyCollection<RedditGameEntry> LoadMessages(JsonNode children) {
@@ -39,7 +36,7 @@ internal sealed class RedditHelper {
 
 		IReadOnlyCollection<RedditGameEntry> returnValue() {
 			while (games.Count is > 0 and > MaxGameEntry) {
-				games.RemoveAt((^1).GetOffset(games.Count));
+				games.RemoveAt(games.Count - 1);
 			}
 
 			return (IReadOnlyCollection<RedditGameEntry>) games.Keys;
@@ -136,7 +133,7 @@ internal sealed class RedditHelper {
 			{ "Sec-Fetch-Dest", "empty" },
 			{ "x-sec-fetch-dest", "empty" },
 			{ "x-sec-fetch-mode", "no-cors" },
-			{ "x-sec-fetch-site", "none" },
+			{ "x-sec-fetch-site", "none" }
 		};
 
 		for (int t = 0; t < retry; t++) {
@@ -194,11 +191,13 @@ internal sealed class RedditHelper {
 		return JsonNode.Parse("{}")!;
 	}
 
+	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
+
 	/// <summary>
-	/// Handles too many requests by checking the status code and headers of the response.
-	/// If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
-	/// and the reset time. If the remaining rate limit is less than or equal to 0, it delays
-	/// the execution until the reset time using the cancellation token.
+	///     Handles too many requests by checking the status code and headers of the response.
+	///     If the status code is Forbidden or TooManyRequests, it checks the remaining rate limit
+	///     and the reset time. If the remaining rate limit is less than or equal to 0, it delays
+	///     the execution until the reset time using the cancellation token.
 	/// </summary>
 	/// <param name="response">The HTTP stream response to handle.</param>
 	/// <param name="maxTimeToWait"></param>
@@ -231,8 +230,6 @@ internal sealed class RedditHelper {
 
 		return false;
 	}
-
-	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
 	/// <summary>
 	///     Parses a JSON object from a stream response. Using not straightforward for ASF trimmed compatibility reasons
