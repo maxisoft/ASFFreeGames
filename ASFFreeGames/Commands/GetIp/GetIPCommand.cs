@@ -44,7 +44,9 @@ internal sealed class GetIPCommand : IBotCommand {
 			}
 		}
 		catch (Exception e) when (e is JsonException or IOException) {
+#pragma warning disable CA1863
 			return IBotCommand.FormatBotResponse(bot, string.Format(CultureInfo.CurrentCulture, Strings.ErrorIsInvalid, e.Message));
+#pragma warning restore CA1863
 		}
 
 		return null;

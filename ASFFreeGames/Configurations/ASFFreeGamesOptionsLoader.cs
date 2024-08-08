@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -58,13 +59,26 @@ public static class ASFFreeGamesOptionsLoader {
 #pragma warning disable CA2007
 
 			// Use FileOptions.Asynchronous when creating a file stream for async operations
-			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
+			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.Asynchronous);
 #pragma warning restore CA2007
 #pragma warning restore CAC001
+			using IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(checked(fs.Length > 0 ? (int) fs.Length + 1 : 1 << 15));
+			int read = await fs.ReadAsync(buffer.Memory, cancellationToken).ConfigureAwait(false);
 
-			// Use JsonSerializerOptions.PropertyNamingPolicy to specify the JSON property naming convention
-			await JsonSerializer.SerializeAsync(fs, options, cancellationToken: cancellationToken).ConfigureAwait(false);
-			fs.SetLength(fs.Position);
+			try {
+				fs.Position = 0;
+				fs.SetLength(0);
+				int written = await ASFFreeGamesOptionsSaver.SaveOptions(fs, options, true, cancellationToken).ConfigureAwait(false);
+				fs.SetLength(written);
+			}
+
+			catch (Exception) {
+				fs.Position = 0;
+				await fs.WriteAsync(buffer.Memory[..read], cancellationToken).ConfigureAwait(false);
+				fs.SetLength(read);
+
+				throw;
+			}
 		}
 		finally {
 			Semaphore.Release();
