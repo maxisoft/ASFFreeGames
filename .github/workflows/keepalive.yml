@@ -9,7 +9,7 @@ on:
   issues:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 
 jobs:
@@ -22,5 +22,6 @@ jobs:
       - uses: gautamkrishnar/keepalive-workflow@v2
         timeout-minutes: 5
         with:
+          use_api: false
           committer_username: ${{ github.repository_owner }}
           committer_email: ${{ github.repository_owner }}@users.noreply.github.com
