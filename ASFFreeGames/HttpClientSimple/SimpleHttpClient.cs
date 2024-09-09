@@ -146,7 +146,7 @@ public sealed class HttpStreamResponse(HttpResponseMessage response, Stream? str
 	public bool HasValidStream => stream is not null && (!EmptyStreamLazy.IsValueCreated || !ReferenceEquals(EmptyStreamLazy.Value, Stream));
 
 	public async Task<string> ReadAsStringAsync(CancellationToken cancellationToken) {
-		using StreamReader reader = new(Stream, Encoding.UTF8);
+		using StreamReader reader = new(Stream); // assume the encoding is UTF8, cannot be specified as per issue #91
 
 		return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 	}
