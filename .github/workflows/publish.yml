@@ -169,6 +169,9 @@ jobs:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     needs: publish
     runs-on: ubuntu-latest
+    permissions:
+        id-token: write
+        attestations: write
 
     steps:
     - name: Checkout code
@@ -182,6 +185,16 @@ jobs:
       with:
         name: windows-latest_${{ env.PLUGIN_NAME }}-generic
         path: out
+
+    - name: Unzip and copy generic artifact
+      run: |
+        mkdir -p attest_provenance
+        unzip out/${{ env.PLUGIN_NAME }}-generic.zip -d attest_provenance
+        cp --archive out/${{ env.PLUGIN_NAME }}-generic.zip attest_provenance
+
+    - uses: actions/attest-build-provenance@v1
+      with:
+          subject-path: 'attest_provenance/*'
 
     - name: Create GitHub release
       id: github_release
