@@ -8,11 +8,10 @@ using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.Utils.Collections.Spans;
 
-namespace Maxisoft.ASF;
+namespace Maxisoft.ASF.AppLists;
 
 public class RecentGameMapping {
-	private const string Magic = "mdict";
-	private static readonly ReadOnlyMemory<byte> MagicBytes = Encoding.UTF8.GetBytes(Magic);
+	private static ReadOnlySpan<byte> MagicBytes => "mdict"u8;
 	private readonly Memory<long> Buffer;
 	private Memory<long> SizeMemory;
 	private Memory<long> DictData;
@@ -35,7 +34,7 @@ public class RecentGameMapping {
 #pragma warning restore CA2201
 		}
 
-		MagicBytes.Span.CopyTo(MemoryMarshal.Cast<long, byte>(Buffer.Span)[..MagicBytes.Length]);
+		MagicBytes.CopyTo(MemoryMarshal.Cast<long, byte>(Buffer.Span)[..MagicBytes.Length]);
 
 		int start = 1;
 
@@ -50,7 +49,7 @@ public class RecentGameMapping {
 	public void Reset() => InitMemories();
 
 	internal void LoadMemories(bool allowFixes) {
-		ReadOnlySpan<byte> magicBytes = MagicBytes.Span;
+		ReadOnlySpan<byte> magicBytes = MagicBytes;
 		ReadOnlySpan<byte> magicSpan = MemoryMarshal.Cast<long, byte>(Buffer.Span)[..magicBytes.Length];
 
 		// ReSharper disable once LoopCanBeConvertedToQuery

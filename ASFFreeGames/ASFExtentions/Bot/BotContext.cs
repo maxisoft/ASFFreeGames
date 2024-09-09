@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF;
+using Maxisoft.ASF.AppLists;
 
 namespace ASFFreeGames.ASFExtentions.Bot;
 

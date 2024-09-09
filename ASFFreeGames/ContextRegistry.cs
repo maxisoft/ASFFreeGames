@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
@@ -46,7 +47,7 @@ namespace Maxisoft.ASF {
 		private readonly ConcurrentDictionary<BotName, BotContext> BotContexts = new();
 
 		/// <inheritdoc/>
-		public BotContext? GetBotContext(Bot bot) => BotContexts.TryGetValue(bot.BotName, out BotContext? context) ? context : null;
+		public BotContext? GetBotContext(Bot bot) => BotContexts.GetValueOrDefault(bot.BotName);
 
 		/// <inheritdoc/>
 		public ValueTask<bool> RemoveBotContext(Bot bot) => ValueTask.FromResult(BotContexts.TryRemove(bot.BotName, out _));
