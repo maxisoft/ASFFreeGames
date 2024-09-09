@@ -196,7 +196,7 @@ jobs:
 
     - name: Clean up dll files
       run: |
-        pushd attest_provenance
+        pushd attest_provenance/${{ env.PLUGIN_NAME }}
         rm -rf NLog.dll SteamKit2.dll System.IO.Hashing.dll protobuf-net.Core.dll protobuf-net.dll
         popd
 
@@ -214,5 +214,5 @@ jobs:
         prerelease: true
         files: |
           out/${{ env.PLUGIN_NAME }}-generic.zip
-          attest_provenance/ASFFreeGames.dll
-          attest_provenance/${{ env.PLUGIN_NAME }}.*
+          attest_provenance/${{ env.PLUGIN_NAME }}/ASFFreeGames.dll
+          attest_provenance/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.*
