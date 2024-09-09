@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using ASFFreeGames.ASFExtentions.Games;
+using Maxisoft.ASF.ASFExtentions;
 
 namespace Maxisoft.ASF;
 
@@ -51,14 +53,14 @@ internal sealed class CompletedAppList : IDisposable {
 			return;
 		}
 #pragma warning disable CA2007
-		await using var sourceStream = new FileStream(
+		await using FileStream sourceStream = new(
 			filePath,
 			FileMode.Create, FileAccess.Write, FileShare.None,
 			bufferSize: FileCompletedAppBufferSize, useAsync: true
 		);
 
 		// ReSharper disable once UseAwaitUsing
-		using var encoder = new BrotliStream(sourceStream, CompressionMode.Compress);
+		using BrotliStream encoder = new(sourceStream, CompressionMode.Compress);
 
 		ChangeBrotliEncoderToFastCompress(encoder);
 #pragma warning restore CA2007
@@ -77,19 +79,19 @@ internal sealed class CompletedAppList : IDisposable {
 
 		try {
 #pragma warning disable CA2007
-			await using var sourceStream = new FileStream(
+			await using FileStream sourceStream = new(
 				filePath,
 				FileMode.Open, FileAccess.Read, FileShare.Read,
 				bufferSize: FileCompletedAppBufferSize, useAsync: true
 			);
 
 			// ReSharper disable once UseAwaitUsing
-			using var decoder = new BrotliStream(sourceStream, CompressionMode.Decompress);
+			using BrotliStream decoder = new(sourceStream, CompressionMode.Decompress);
 #pragma warning restore CA2007
 			ChangeBrotliEncoderToFastCompress(decoder);
 
 			// ReSharper disable once UseAwaitUsing
-			using var ms = new MemoryStream();
+			using MemoryStream ms = new();
 			await decoder.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
 			await decoder.FlushAsync(cancellationToken).ConfigureAwait(false);
 

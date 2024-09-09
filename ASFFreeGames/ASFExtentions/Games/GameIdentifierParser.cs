@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using ASFFreeGames.ASFExtentions.Games;
 
-namespace Maxisoft.ASF;
+namespace Maxisoft.ASF.ASFExtentions.Games;
 
 /// <summary>
 ///     Represents a static class that provides methods for parsing game identifiers from strings.

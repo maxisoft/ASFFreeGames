@@ -1,42 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
+using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF.Reddit;
 using Maxisoft.Utils.Collections.Dictionaries;
 
-namespace Maxisoft.ASF.Redlib.Html;
-
-#pragma warning disable CA1052
-public partial class RedlibHtmlParserRegex {
-	[GeneratedRegex(@"(.addlicense)\s+(asf)?\s*((?<appid>(s/|a/)\d+)\s*,?\s*)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-	internal static partial Regex CommandRegex();
-
-	[GeneratedRegex(@"href\s*=\s*.\s*/r/[\P{Cc}\P{Cn}\P{Cs}]+?comments[\P{Cc}\P{Cn}\P{Cs}/]+?.\s*/?\s*>.*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-	internal static partial Regex HrefCommentLinkRegex();
-
-	[GeneratedRegex(@".*free\s+DLC\s+for\s+a.*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-	internal static partial Regex IsDlcRegex();
-
-	[GeneratedRegex(@".*free\s+to\s+play.*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-	internal static partial Regex IsFreeToPlayRegex();
-
-	[GeneratedRegex(@".*permanently\s+free.*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-	internal static partial Regex IsPermanentlyFreeRegex();
-#pragma warning restore CA1052
-}
-
-public class SkipAndContinueParsingException : Exception {
-	public int StartIndex { get; init; }
-
-	public SkipAndContinueParsingException(string message, Exception innerException) : base(message, innerException) { }
-
-	public SkipAndContinueParsingException() { }
-
-	public SkipAndContinueParsingException(string message) : base(message) { }
-}
-
-internal readonly record struct ParserIndices(int StartOfCommandIndex, int EndOfCommandIndex, int StartOfFooterIndex, int HrefStartIndex, int HrefEndIndex);
+namespace Maxisoft.ASF.Redlib;
 
 public static class RedlibHtmlParser {
 	private const int MaxIdentifierPerEntry = 32;
@@ -236,45 +205,4 @@ public static class RedlibHtmlParser {
 
 		return gameIdentifiers[..gameIdentifiersCount];
 	}
-}
-
-#pragma warning disable CA1819
-public readonly record struct GameEntry(IReadOnlyCollection<GameIdentifier> GameIdentifiers, string CommentLink, EGameType TypeFlags) { }
-
-public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<GameEntry> {
-	public bool Equals(GameEntry x, GameEntry y) {
-		if (x.GameIdentifiers.Count != y.GameIdentifiers.Count) {
-			return false;
-		}
-
-		using IEnumerator<GameIdentifier> xIt = x.GameIdentifiers.GetEnumerator();
-		using IEnumerator<GameIdentifier> yIt = y.GameIdentifiers.GetEnumerator();
-
-		while (xIt.MoveNext() && yIt.MoveNext()) {
-			if (!xIt.Current.Equals(yIt.Current)) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	public int GetHashCode(GameEntry obj) {
-		HashCode h = new();
-
-		foreach (GameIdentifier id in obj.GameIdentifiers) {
-			h.Add(id);
-		}
-
-		return h.ToHashCode();
-	}
-}
-#pragma warning restore CA1819
-
-[Flags]
-public enum EGameType : sbyte {
-	None = 0,
-	FreeToPlay = 1 << 0,
-	PermenentlyFree = 1 << 1,
-	Dlc = 1 << 2
 }

@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Maxisoft.ASF.Utils;
 using Xunit;
 
 namespace Maxisoft.ASF.Tests;

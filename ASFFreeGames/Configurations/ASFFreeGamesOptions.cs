@@ -4,7 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF;
+using Maxisoft.ASF.ASFExtentions;
 
 namespace ASFFreeGames.Configurations;
 

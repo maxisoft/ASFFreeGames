@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using ArchiSteamFarm.Steam;
 using ASFFreeGames.Configurations;
+using Maxisoft.ASF.Utils;
 
 namespace Maxisoft.ASF;
 

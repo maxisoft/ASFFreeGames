@@ -8,11 +8,15 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Bot;
+using ASFFreeGames.ASFExtentions.Games;
 using ASFFreeGames.Configurations;
 using Maxisoft.ASF;
+using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.HttpClientSimple;
 using Maxisoft.ASF.Reddit;
+using Maxisoft.ASF.Utils;
 using SteamKit2;
 
 namespace ASFFreeGames.Commands {

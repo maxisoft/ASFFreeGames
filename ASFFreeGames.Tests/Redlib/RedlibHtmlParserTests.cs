@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Maxisoft.ASF.Redlib.Html;
+using Maxisoft.ASF.Redlib;
 using Xunit;
 
 namespace Maxisoft.ASF.Tests.Redlib;

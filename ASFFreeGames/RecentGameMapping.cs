@@ -4,6 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using ASFFreeGames.ASFExtentions.Games;
+using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.Utils.Collections.Spans;
 
 namespace Maxisoft.ASF;
@@ -73,7 +75,7 @@ public class RecentGameMapping {
 			throw new InvalidDataException();
 		}
 
-		var dict = SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span);
+		SpanDict<GameIdentifier, long> dict = SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span);
 
 		if (dict.Count != CountRef) {
 			if (!allowFixes) {

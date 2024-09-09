@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 
-namespace Maxisoft.ASF {
+namespace ASFFreeGames.ASFExtentions.Bot {
 	/// <summary>
 	/// Represents a readonly record struct that encapsulates bot's name (a string) and provides implicit conversion and comparison methods.
 	/// </summary>

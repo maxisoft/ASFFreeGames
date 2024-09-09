@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Bot;
+using Maxisoft.ASF.ASFExtentions;
 
 namespace Maxisoft.ASF {
 	/// <summary>

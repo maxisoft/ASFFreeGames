@@ -18,9 +18,6 @@ namespace ASFFreeGames.Commands {
 			{ "FREEGAMES", new FreeGamesCommand(options) }
 		};
 
-		// Define a constructor that takes an plugin options instance as a parameter
-		// Initialize the commands dictionary with instances of GetIPCommand and FreeGamesCommand
-
 		public async Task<string?> Execute(Bot? bot, string message, string[] args, ulong steamID = 0, CancellationToken cancellationToken = default) {
 			try {
 				if (args is { Length: > 0 }) {
@@ -36,7 +33,7 @@ namespace ASFFreeGames.Commands {
 				// ReSharper disable once RedundantAssignment
 				bool verboseLogging = Options.VerboseLog ?? false;
 #if DEBUG
-				verboseLogging = true; // Enable verbose logging in debug mode
+				verboseLogging = true; // Enforce verbose logging in debug mode
 #endif
 
 				if (verboseLogging) {
