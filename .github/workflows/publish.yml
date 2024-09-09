@@ -172,6 +172,8 @@ jobs:
     permissions:
         id-token: write
         attestations: write
+        packages: write
+        contents: write
 
     steps:
     - name: Checkout code
@@ -192,27 +194,25 @@ jobs:
         unzip out/${{ env.PLUGIN_NAME }}-generic.zip -d attest_provenance
         cp --archive out/${{ env.PLUGIN_NAME }}-generic.zip attest_provenance
 
+    - name: Clean up dll files
+      run: |
+        pushd attest_provenance
+        rm -rf NLog.dll SteamKit2.dll System.IO.Hashing.dll protobuf-net.Core.dll protobuf-net.dll
+        popd
+
     - uses: actions/attest-build-provenance@v1
       with:
-          subject-path: 'attest_provenance/*'
+        subject-path: 'attest_provenance/*'
 
     - name: Create GitHub release
       id: github_release
-      uses: actions/create-release@v1.1.4
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2.0.8
       with:
         tag_name: ${{ github.ref }}
-        release_name: ${{ env.PLUGIN_NAME }} ${{ github.ref }}
+        name: ${{ env.PLUGIN_NAME }} ${{ github.ref }}
         body_path: .github/RELEASE_TEMPLATE.md
         prerelease: true
-
-    - name: Upload generic to GitHub release
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.github_release.outputs.upload_url }}
-        asset_path: out/${{ env.PLUGIN_NAME }}-generic.zip
-        asset_name: ${{ env.PLUGIN_NAME }}-generic.zip
-        asset_content_type: application/zip
+        files: |
+          out/${{ env.PLUGIN_NAME }}-generic.zip
+          attest_provenance/ASFFreeGames.dll
+          attest_provenance/${{ env.PLUGIN_NAME }}.*
