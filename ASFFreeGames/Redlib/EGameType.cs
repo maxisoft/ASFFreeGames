@@ -1,4 +1,5 @@
 ﻿using System;
+using Maxisoft.ASF.Reddit;
 
 namespace Maxisoft.ASF.Redlib;
 
@@ -8,4 +9,20 @@ public enum EGameType : sbyte {
 	FreeToPlay = 1 << 0,
 	PermenentlyFree = 1 << 1,
 	Dlc = 1 << 2
+}
+
+public static class GameTypeExtensions {
+	public static ERedditGameEntryKind ToRedditGameEntryKind(this EGameType type) {
+		ERedditGameEntryKind res = ERedditGameEntryKind.None;
+
+		if (type.HasFlag(EGameType.FreeToPlay)) {
+			res |= ERedditGameEntryKind.FreeToPlay;
+		}
+
+		if (type.HasFlag(EGameType.Dlc)) {
+			res |= ERedditGameEntryKind.Dlc;
+		}
+
+		return res;
+	}
 }

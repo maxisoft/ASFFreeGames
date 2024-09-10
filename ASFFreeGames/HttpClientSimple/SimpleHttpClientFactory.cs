@@ -25,7 +25,9 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 
 	private enum ECacheKey {
 		Generic,
-		Reddit
+		Reddit,
+		Redlib,
+		Github
 	}
 
 	private SimpleHttpClient CreateFor(ECacheKey key, string? proxy = null) {
@@ -72,7 +74,11 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		}
 	}
 
-	public SimpleHttpClient CreateForReddit() => CreateFor(ECacheKey.Reddit, options.RedditProxy);
+	public SimpleHttpClient CreateForReddit() => CreateFor(ECacheKey.Reddit, options.RedditProxy ?? options.Proxy);
+	public SimpleHttpClient CreateForRedlib() => CreateFor(ECacheKey.Redlib, options.RedlibProxy ?? options.RedditProxy ?? options.Proxy);
+	public SimpleHttpClient CreateForGithub() => CreateFor(ECacheKey.Github, options.Proxy);
+
+	public SimpleHttpClient CreateGeneric() => CreateFor(ECacheKey.Generic, options.Proxy);
 
 	public void Dispose() {
 		lock (Cache) {

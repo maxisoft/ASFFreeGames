@@ -5,13 +5,13 @@ using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF.Reddit;
 using Maxisoft.Utils.Collections.Dictionaries;
 
-namespace Maxisoft.ASF.Redlib;
+namespace Maxisoft.ASF.Redlib.Html;
 
 public static class RedlibHtmlParser {
 	private const int MaxIdentifierPerEntry = 32;
 
-	public static IReadOnlyCollection<GameEntry> ParseGamesFromHtml(ReadOnlySpan<char> html, bool dedup = true) {
-		OrderedDictionary<GameEntry, EmptyStruct> entries = new(dedup ? new GameIdentifiersEqualityComparer() : EqualityComparer<GameEntry>.Default);
+	public static IReadOnlyCollection<RedlibGameEntry> ParseGamesFromHtml(ReadOnlySpan<char> html, bool dedup = true) {
+		OrderedDictionary<RedlibGameEntry, EmptyStruct> entries = new(dedup ? new GameIdentifiersEqualityComparer() : EqualityComparer<RedlibGameEntry>.Default);
 		int startIndex = 0;
 
 		Span<GameIdentifier> gameIdentifiers = stackalloc GameIdentifier[MaxIdentifierPerEntry];
@@ -39,7 +39,7 @@ public static class RedlibHtmlParser {
 				EGameType flag = ParseGameTypeFlags(html[indices.StartOfCommandIndex..indices.StartOfFooterIndex]);
 
 				ReadOnlySpan<char> title = ExtractTitle(html, indices);
-				GameEntry entry = new(effectiveGameIdentifiers.ToArray(), title.ToString(), flag);
+				RedlibGameEntry entry = new(effectiveGameIdentifiers.ToArray(), title.ToString(), flag);
 
 				try {
 					entries.Add(entry, default(EmptyStruct));
@@ -57,7 +57,7 @@ public static class RedlibHtmlParser {
 			startIndex = indices.StartOfFooterIndex + 1;
 		}
 
-		return (IReadOnlyCollection<GameEntry>) entries.Keys;
+		return (IReadOnlyCollection<RedlibGameEntry>) entries.Keys;
 	}
 
 	internal static ReadOnlySpan<char> ExtractTitle(ReadOnlySpan<char> html, ParserIndices indices) {
@@ -199,7 +199,6 @@ public static class RedlibHtmlParser {
 				continue;
 			}
 
-			Debug.Assert(gameIdentifiersCount < gameIdentifiers.Length);
 			gameIdentifiers[gameIdentifiersCount++] = gameIdentifier;
 		}
 

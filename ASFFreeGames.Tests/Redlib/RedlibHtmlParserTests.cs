@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Maxisoft.ASF.Redlib;
+using Maxisoft.ASF.Redlib.Html;
 using Xunit;
 
 namespace Maxisoft.ASF.Tests.Redlib;
@@ -14,7 +15,7 @@ public class RedlibHtmlParserTests {
 		string html = await LoadHtml().ConfigureAwait(false);
 
 		// ReSharper disable once ArgumentsStyleLiteral
-		IReadOnlyCollection<GameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: false);
+		IReadOnlyCollection<RedlibGameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: false);
 		Assert.NotEmpty(result);
 		Assert.Equal(25, result.Count);
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Maxisoft.ASF.Redlib;
+namespace Maxisoft.ASF.Redlib.Html;
 
 public class SkipAndContinueParsingException : Exception {
 	public int StartIndex { get; init; }

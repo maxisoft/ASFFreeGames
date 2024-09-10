@@ -31,6 +31,8 @@ public static class ASFFreeGamesOptionsLoader {
 			options.RandomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckInterval", options.RandomizeRecheckInterval);
 			options.Proxy = configurationRoot.GetValue("Proxy", options.Proxy);
 			options.RedditProxy = configurationRoot.GetValue("RedditProxy", options.RedditProxy);
+			options.RedlibProxy = configurationRoot.GetValue("RedlibProxy", options.RedlibProxy);
+			options.RedlibInstanceUrl = configurationRoot.GetValue("RedlibInstanceUrl", options.RedlibInstanceUrl);
 		}
 		finally {
 			Semaphore.Release();

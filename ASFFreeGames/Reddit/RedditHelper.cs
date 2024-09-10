@@ -15,16 +15,16 @@ using Maxisoft.Utils.Collections.Dictionaries;
 
 namespace Maxisoft.ASF.Reddit;
 
-internal sealed class RedditHelper {
+internal static class RedditHelper {
 	private const int MaxGameEntry = 1024;
-	private const string User = "ASFinfo";
+	internal const string User = "ASFinfo";
 
 	/// <summary>
 	///     Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, CancellationToken cancellationToken) {
-		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken).ConfigureAwait(false);
+	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, uint retry = 5, CancellationToken cancellationToken = default) {
+		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken, retry).ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
@@ -237,7 +237,7 @@ internal sealed class RedditHelper {
 	/// <param name="stream">The stream response containing the JSON data.</param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
-	private static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
+	internal static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
 		string data = await stream.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
 		return JsonNode.Parse(data);

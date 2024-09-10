@@ -5,8 +5,8 @@ using ASFFreeGames.ASFExtentions.Games;
 namespace Maxisoft.ASF.Redlib;
 #pragma warning disable CA1819
 
-public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<GameEntry> {
-	public bool Equals(GameEntry x, GameEntry y) {
+public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<RedlibGameEntry> {
+	public bool Equals(RedlibGameEntry x, RedlibGameEntry y) {
 		if (x.GameIdentifiers.Count != y.GameIdentifiers.Count) {
 			return false;
 		}
@@ -23,7 +23,7 @@ public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<GameEntr
 		return true;
 	}
 
-	public int GetHashCode(GameEntry obj) {
+	public int GetHashCode(RedlibGameEntry obj) {
 		HashCode h = new();
 
 		foreach (GameIdentifier id in obj.GameIdentifiers) {
