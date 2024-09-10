@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading;
 using System.Threading.Tasks;
 using Maxisoft.ASF.Reddit;
 using Maxisoft.Utils.Collections.Spans;
@@ -104,12 +103,6 @@ public sealed class RedditHelperTests {
 #pragma warning restore CA2007
 		JsonNode jsonNode = await JsonNode.ParseAsync(stream).ConfigureAwait(false) ?? JsonNode.Parse("{}")!;
 
-		return RedditHelper.LoadMessages(jsonNode["data"]?["children"]!);
-	}
-
-	private static async Task<string> ReadToEndAsync(Stream stream, CancellationToken cancellationToken) {
-		using StreamReader reader = new(stream);
-
-		return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+		return RedditHelper.LoadMessages(jsonNode["data"]?["children"]!).ToArray();
 	}
 }

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 
-namespace Maxisoft.ASF;
+namespace Maxisoft.ASF.Utils;
 
 #nullable enable
 

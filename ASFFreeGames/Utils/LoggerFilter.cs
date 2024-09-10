@@ -7,13 +7,15 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using ArchiSteamFarm.NLog;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Bot;
+using Maxisoft.ASF.ASFExtentions;
 using NLog;
 using NLog.Config;
 using NLog.Filters;
 
 // ReSharper disable RedundantNullableFlowAttribute
 
-namespace Maxisoft.ASF;
+namespace Maxisoft.ASF.Utils;
 
 #nullable enable
 

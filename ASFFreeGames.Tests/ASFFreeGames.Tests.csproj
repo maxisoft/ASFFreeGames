@@ -23,6 +23,8 @@
 
     <ItemGroup>
       <EmbeddedResource Include="ASFinfo.json" />
+      <None Remove="redlib_asfinfo.html" />
+      <EmbeddedResource Include="redlib_asfinfo.html" />
     </ItemGroup>
 
     <ItemGroup>

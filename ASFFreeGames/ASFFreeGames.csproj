@@ -72,4 +72,13 @@
 	    <Link>Directory.Build.props</Link>
 	  </Content>
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Resouces\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Resouces\redlib_instances.json" />
+	  <EmbeddedResource Include="Resouces\redlib_instances.json" />
+	</ItemGroup>
 </Project>

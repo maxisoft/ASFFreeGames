@@ -8,17 +8,24 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Bot;
+using ASFFreeGames.ASFExtentions.Games;
 using ASFFreeGames.Configurations;
 using Maxisoft.ASF;
+using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.ASF.Configurations;
+using Maxisoft.ASF.FreeGames.Strategies;
 using Maxisoft.ASF.HttpClientSimple;
 using Maxisoft.ASF.Reddit;
+using Maxisoft.ASF.Utils;
 using SteamKit2;
 
 namespace ASFFreeGames.Commands {
 	// Implement the IBotCommand interface
 	internal sealed class FreeGamesCommand(ASFFreeGamesOptions options) : IBotCommand, IDisposable {
 		public void Dispose() {
+			Strategy.Dispose();
+
 			if (HttpFactory.IsValueCreated) {
 				HttpFactory.Value.Dispose();
 			}
@@ -35,6 +42,9 @@ namespace ASFFreeGames.Commands {
 		private ASFFreeGamesOptions Options = options ?? throw new ArgumentNullException(nameof(options));
 
 		private readonly Lazy<SimpleHttpClientFactory> HttpFactory = new(() => new SimpleHttpClientFactory(options));
+
+		public IListFreeGamesStrategy Strategy { get; internal set; } = new ListFreeGamesMainStrategy();
+		public EListFreeGamesStrategy PreviousSucessfulStrategy { get; private set; } = EListFreeGamesStrategy.Reddit | EListFreeGamesStrategy.Redlib;
 
 		// Define a constructor that takes an plugin options instance as a parameter
 
@@ -212,11 +222,17 @@ namespace ASFFreeGames.Commands {
 			int res = 0;
 
 			try {
-				ICollection<RedditGameEntry> games;
+				IReadOnlyCollection<RedditGameEntry> games;
+
+				ListFreeGamesContext strategyContext = new(Options, new Lazy<SimpleHttpClient>(() => HttpFactory.Value.CreateGeneric())) {
+					Strategy = Strategy,
+					HttpClientFactory = HttpFactory.Value,
+					PreviousSucessfulStrategy = PreviousSucessfulStrategy
+				};
 
 				try {
 #pragma warning disable CA2000
-					games = await RedditHelper.GetGames(HttpFactory.Value.CreateForReddit(), cancellationToken).ConfigureAwait(false);
+					games = await Strategy.GetGames(strategyContext, cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA2000
 				}
 				catch (Exception e) when (e is InvalidOperationException or JsonException or IOException or RedditServerException) {
@@ -224,13 +240,23 @@ namespace ASFFreeGames.Commands {
 						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericException(e);
 					}
 					else {
-						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"Unable to load json from reddit {e.GetType().Name}: {e.Message}");
+						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"Unable to get and load json {e.GetType().Name}: {e.Message}");
 					}
 
 					return 0;
 				}
+				finally {
+					PreviousSucessfulStrategy = strategyContext.PreviousSucessfulStrategy;
 
-				LogNewGameCount(games, VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser);
+					if (Options.VerboseLog ?? false) {
+						ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"PreviousSucessfulStrategy = {PreviousSucessfulStrategy}");
+					}
+				}
+
+#pragma warning disable CA1308
+				string remote = strategyContext.PreviousSucessfulStrategy.ToString().ToLowerInvariant();
+#pragma warning restore CA1308
+				LogNewGameCount(games, remote, VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser);
 
 				foreach (Bot bot in bots) {
 					if (cancellationToken.IsCancellationRequested) {
@@ -256,7 +282,7 @@ namespace ASFFreeGames.Commands {
 						continue;
 					}
 
-					foreach ((string? identifier, long time, bool freeToPlay, bool dlc) in games) {
+					foreach ((string identifier, long time, bool freeToPlay, bool dlc) in games) {
 						if (freeToPlay && Options.SkipFreeToPlay is true) {
 							continue;
 						}
@@ -265,7 +291,7 @@ namespace ASFFreeGames.Commands {
 							continue;
 						}
 
-						if (identifier is null || !GameIdentifier.TryParse(identifier, out var gid)) {
+						if (string.IsNullOrWhiteSpace(identifier) || !GameIdentifier.TryParse(identifier, out GameIdentifier gid)) {
 							continue;
 						}
 
@@ -344,7 +370,7 @@ namespace ASFFreeGames.Commands {
 			return res;
 		}
 
-		private void LogNewGameCount(ICollection<RedditGameEntry> games, bool logZero = false) {
+		private void LogNewGameCount(IReadOnlyCollection<RedditGameEntry> games, string remote, bool logZero = false) {
 			int totalAppIdCounter = PreviouslySeenAppIds.Count;
 			int newGameCounter = 0;
 
@@ -355,13 +381,13 @@ namespace ASFFreeGames.Commands {
 			}
 
 			if ((totalAppIdCounter == 0) && (games.Count > 0)) {
-				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found potentially {games.Count} free games on reddit", nameof(CollectGames));
+				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found potentially {games.Count} free games on {remote}", nameof(CollectGames));
 			}
 			else if (newGameCounter > 0) {
-				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found {newGameCounter} fresh free game(s) on reddit", nameof(CollectGames));
+				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found {newGameCounter} fresh free game(s) on {remote}", nameof(CollectGames));
 			}
 			else if ((newGameCounter == 0) && logZero) {
-				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found 0 new game out of {games.Count} free games on reddit", nameof(CollectGames));
+				ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericInfo($"[FreeGames] found 0 new game out of {games.Count} free games on {remote}", nameof(CollectGames));
 			}
 		}
 

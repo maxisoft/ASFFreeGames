@@ -8,10 +8,13 @@ using System.Threading.Tasks;
 using ArchiSteamFarm.Collections;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Bot;
 using ASFFreeGames.Commands;
 using ASFFreeGames.Configurations;
 using JetBrains.Annotations;
+using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.ASF.Configurations;
+using Maxisoft.ASF.Utils;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
 

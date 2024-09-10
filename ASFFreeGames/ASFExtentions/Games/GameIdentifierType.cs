@@ -1,4 +1,4 @@
-﻿namespace Maxisoft.ASF;
+﻿namespace Maxisoft.ASF.ASFExtentions.Games;
 
 public enum GameIdentifierType : sbyte {
 	None = 0,

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using ArchiSteamFarm.Steam;
 
-namespace Maxisoft.ASF;
+namespace ASFFreeGames.ASFExtentions.Bot;
+
+using Bot = ArchiSteamFarm.Steam.Bot;
 
 internal sealed class BotEqualityComparer : IEqualityComparer<Bot> {
 	public bool Equals(Bot? x, Bot? y) {

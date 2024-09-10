@@ -1,4 +1,7 @@
 ﻿using System;
+using ASFFreeGames.ASFExtentions.Games;
+using Maxisoft.ASF.ASFExtentions;
+using Maxisoft.ASF.ASFExtentions.Games;
 using Xunit;
 
 namespace Maxisoft.ASF.Tests;

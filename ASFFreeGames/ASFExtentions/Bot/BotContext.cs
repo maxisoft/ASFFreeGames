@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Games;
+using Maxisoft.ASF;
+using Maxisoft.ASF.AppLists;
 
-namespace Maxisoft.ASF;
+namespace ASFFreeGames.ASFExtentions.Bot;
+
+using Bot = ArchiSteamFarm.Steam.Bot;
 
 internal sealed class BotContext : IDisposable {
 	private const ulong TriesBeforeBlacklistingGameEntry = 5;

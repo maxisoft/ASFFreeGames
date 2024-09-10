@@ -4,7 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using ArchiSteamFarm.Steam;
+using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF;
+using Maxisoft.ASF.ASFExtentions;
 
 namespace ASFFreeGames.Configurations;
 
@@ -49,5 +51,13 @@ public class ASFFreeGamesOptions {
 
 	[JsonPropertyName("redditProxy")]
 	public string? RedditProxy { get; set; }
+
+	[JsonPropertyName("redlibProxy")]
+	public string? RedlibProxy { get; set; }
 	#endregion
+
+	[JsonPropertyName("redlibInstanceUrl")]
+#pragma warning disable CA1056
+	public string? RedlibInstanceUrl { get; set; } = "https://raw.githubusercontent.com/redlib-org/redlib-instances/main/instances.json";
+#pragma warning restore CA1056
 }

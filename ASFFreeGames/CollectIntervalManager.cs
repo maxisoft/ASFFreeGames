@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Maxisoft.ASF.Utils;
 
 namespace Maxisoft.ASF;
 
@@ -27,7 +28,7 @@ internal interface ICollectIntervalManager : IDisposable {
 	void StopTimer();
 }
 
-internal sealed class CollectIntervalManager : ICollectIntervalManager {
+internal sealed class CollectIntervalManager(IASFFreeGamesPlugin plugin) : ICollectIntervalManager {
 	private static readonly RandomUtils.GaussianRandom Random = new();
 
 	/// <summary>
@@ -39,16 +40,10 @@ internal sealed class CollectIntervalManager : ICollectIntervalManager {
 	/// <remarks>
 	///     This property is used to multiply the standard deviation of the normal distribution used to generate the random delay in the GetRandomizedTimerDelay method. If this property returns 0, then the random delay will be equal to the mean value.
 	/// </remarks>
-	private int RandomizeIntervalSwitch => Plugin.Options.RandomizeRecheckInterval ?? true ? 1 : 0;
-
-	// The reference to the plugin instance
-	private readonly IASFFreeGamesPlugin Plugin;
+	private int RandomizeIntervalSwitch => plugin.Options.RandomizeRecheckInterval ?? true ? 1 : 0;
 
 	// The timer instance
 	private Timer? Timer;
-
-	// The constructor that takes a plugin instance as a parameter
-	public CollectIntervalManager(IASFFreeGamesPlugin plugin) => Plugin = plugin;
 
 	public void Dispose() => StopTimer();
 
@@ -59,10 +54,10 @@ internal sealed class CollectIntervalManager : ICollectIntervalManager {
 			TimeSpan initialDelay = GetRandomizedTimerDelay(30, 6 * RandomizeIntervalSwitch, 1, 5 * 60);
 
 			// Get a random regular delay
-			TimeSpan regularDelay = GetRandomizedTimerDelay(Plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
+			TimeSpan regularDelay = GetRandomizedTimerDelay(plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
 
 			// Create a new timer with the collect operation as the callback
-			Timer = new Timer(Plugin.CollectGamesOnClock);
+			Timer = new Timer(plugin.CollectGamesOnClock);
 
 			// Start the timer with the initial and regular delays
 			Timer.Change(initialDelay, regularDelay);
@@ -74,12 +69,12 @@ internal sealed class CollectIntervalManager : ICollectIntervalManager {
 	/// </summary>
 	/// <returns>The randomized delay.</returns>
 	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)" />
-	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(Plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
+	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
 
 	public TimeSpan RandomlyChangeCollectInterval(object? source) {
 		// Calculate a random delay using GetRandomizedTimerDelay method
 		TimeSpan delay = GetRandomizedTimerDelay();
-		ResetTimer(() => new Timer(state => Plugin.CollectGamesOnClock(state), source, delay, delay));
+		ResetTimer(() => new Timer(state => plugin.CollectGamesOnClock(state), source, delay, delay));
 
 		return delay;
 	}

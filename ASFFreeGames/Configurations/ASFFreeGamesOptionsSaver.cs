@@ -49,11 +49,12 @@ public static class ASFFreeGamesOptionsSaver {
 		written += WriteNameAndProperty("verboseLog"u8, options.VerboseLog, buffer, written);
 		written += WriteNameAndProperty("proxy"u8, options.Proxy, buffer, written);
 		written += WriteNameAndProperty("redditProxy"u8, options.RedditProxy, buffer, written);
+		written += WriteNameAndProperty("redlibProxy"u8, options.RedlibProxy, buffer, written);
+		written += WriteNameAndProperty("redlibInstanceUrl"u8, options.RedlibInstanceUrl, buffer, written);
 		RemoveTrailingCommaAndLineReturn(buffer, ref written);
 
 		written += WriteJsonString("\n}"u8, buffer, written);
 
-		// Resize buffer if needed
 		if (written >= buffer.Length) {
 			throw new InvalidOperationException("Buffer overflow while saving options");
 		}
