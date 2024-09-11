@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +20,8 @@ public class RedlibHtmlParserTests {
 		IReadOnlyCollection<RedlibGameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: false);
 		Assert.NotEmpty(result);
 		Assert.Equal(25, result.Count);
+
+		Assert.Equal(new DateTimeOffset(2024, 6, 1, 23, 43, 40, TimeSpan.Zero), result.Skip(1).FirstOrDefault().Date);
 
 // ReSharper disable once ArgumentsStyleLiteral
 		result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: true);

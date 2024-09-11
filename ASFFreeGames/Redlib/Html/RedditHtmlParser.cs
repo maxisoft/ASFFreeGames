@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF.Reddit;
 using Maxisoft.Utils.Collections.Dictionaries;
@@ -22,7 +23,7 @@ public static class RedlibHtmlParser {
 			try {
 				indices = ParseIndices(html, startIndex);
 
-				(int startOfCommandIndex, int endOfCommandIndex, int _, _, _) = indices;
+				(int startOfCommandIndex, int endOfCommandIndex, int _, _, _, _, _) = indices;
 
 				ReadOnlySpan<char> command = html[startOfCommandIndex..endOfCommandIndex].Trim();
 
@@ -39,7 +40,18 @@ public static class RedlibHtmlParser {
 				EGameType flag = ParseGameTypeFlags(html[indices.StartOfCommandIndex..indices.StartOfFooterIndex]);
 
 				ReadOnlySpan<char> title = ExtractTitle(html, indices);
-				RedlibGameEntry entry = new(effectiveGameIdentifiers.ToArray(), title.ToString(), flag);
+
+				DateTimeOffset createdDate = default;
+
+				if ((indices.DateStartIndex < indices.DateEndIndex) && (indices.DateEndIndex > 0)) {
+					ReadOnlySpan<char> dateString = html[indices.DateStartIndex..indices.DateEndIndex].Trim();
+
+					if (!TryParseCreatedDate(dateString, out createdDate)) {
+						createdDate = default(DateTimeOffset);
+					}
+				}
+
+				RedlibGameEntry entry = new(effectiveGameIdentifiers.ToArray(), title.ToString(), flag, createdDate);
 
 				try {
 					entries.Add(entry, default(EmptyStruct));
@@ -58,6 +70,32 @@ public static class RedlibHtmlParser {
 		}
 
 		return (IReadOnlyCollection<RedlibGameEntry>) entries.Keys;
+	}
+
+	private static readonly string[] CommonDateFormat = ["MM dd yyyy, HH:mm:ss zzz", "MM dd yyyy, HH:mm:ss zzz", "MMM dd yyyy, HH:mm:ss UTC", "yyyy-MM-ddTHH:mm:ssZ", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-dd HH:mm:ss zzz", "yyyy-MM-dd HH:mm:ss.fffffff zzz", "yyyy-MM-ddTHH:mm:ss.fffffffzzz", "yyyy-MM-dd HH:mm:ss", "yyyyMMddHHmmss", "yyyyMMddHHmmss.fffffff"];
+
+	private static bool TryParseCreatedDate(ReadOnlySpan<char> dateString, out DateTimeOffset createdDate) {
+		// parse date like May 31 2024, 12:28:53 UTC
+
+		if (dateString.IsEmpty) {
+			createdDate = DateTimeOffset.Now;
+
+			return false;
+		}
+
+		foreach (string format in CommonDateFormat) {
+			if (DateTimeOffset.TryParseExact(dateString, format, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal | DateTimeStyles.AllowWhiteSpaces, out createdDate)) {
+				return true;
+			}
+		}
+
+		if (DateTimeOffset.TryParse(dateString, DateTimeFormatInfo.InvariantInfo, out createdDate)) {
+			return true;
+		}
+
+		createdDate = DateTimeOffset.Now;
+
+		return false;
 	}
 
 	internal static ReadOnlySpan<char> ExtractTitle(ReadOnlySpan<char> html, ParserIndices indices) {
@@ -113,6 +151,31 @@ public static class RedlibHtmlParser {
 		}
 
 		commentLinkIndex += start;
+
+		int createdStartIndex = html[commentLinkIndex..startIndex].IndexOf("<span class=\"created\"", StringComparison.InvariantCultureIgnoreCase);
+
+		if (createdStartIndex < 0) {
+			throw new SkipAndContinueParsingException("No created span found") { StartIndex = startIndex + 1 };
+		}
+
+		createdStartIndex += commentLinkIndex;
+
+		const string title = "title=\"";
+		int createdTitleStartIndex = html[createdStartIndex..startIndex].IndexOf(title, StringComparison.InvariantCultureIgnoreCase);
+
+		if (createdTitleStartIndex < 0) {
+			throw new SkipAndContinueParsingException("No created title attribute found") { StartIndex = startIndex + 1 };
+		}
+
+		createdTitleStartIndex += createdStartIndex + title.Length;
+
+		int createdTitleEndIndex = html[createdTitleStartIndex..startIndex].IndexOf("\"", StringComparison.InvariantCultureIgnoreCase);
+
+		if (createdTitleEndIndex < 0) {
+			throw new SkipAndContinueParsingException("No created title attribute end found") { StartIndex = startIndex + 1 };
+		}
+
+		createdTitleEndIndex += createdTitleStartIndex;
 
 		int hrefStartIndex = html[commentLinkIndex..startIndex].IndexOf("href", StringComparison.InvariantCultureIgnoreCase);
 
@@ -170,7 +233,7 @@ public static class RedlibHtmlParser {
 
 		startIndex = html[startIndex..commandEndIndex].IndexOf("!addlicense", StringComparison.OrdinalIgnoreCase) + startIndex;
 
-		return new ParserIndices(startIndex, commandEndIndex, infoFooterStartIndex, hrefStartIndex, hrefEndIndex);
+		return new ParserIndices(startIndex, commandEndIndex, infoFooterStartIndex, hrefStartIndex, hrefEndIndex, createdTitleStartIndex, createdTitleEndIndex);
 	}
 
 	internal static Span<GameIdentifier> SplitCommandAndGetGameIdentifiers(ReadOnlySpan<char> command, Span<GameIdentifier> gameIdentifiers) {
