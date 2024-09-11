@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Core;
@@ -76,6 +78,40 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 		}
 	}
 
+	/// <summary>
+	///     Tries to get the date from the HTTP headers using reflection.
+	/// </summary>
+	/// <param name="response">The HTTP response.</param>
+	/// <returns>The date from the HTTP headers, or null if not found.</returns>
+	/// <remarks>
+	///     This method is used to work around the trimmed binary issue in the release build.
+	///     In the release build, the <see cref="HttpResponseMessage.Headers" /> property is trimmed, and the <c>Date</c>
+	///     property is not available. This method uses reflection to safely try to get the date from the HTTP headers.
+	/// </remarks>
+	public static DateTimeOffset? GetDateFromHeaders([NotNull] HttpResponseMessage response) {
+		try {
+			Type headersType = response.Headers.GetType();
+
+			// Try to get the "Date" property using reflection
+			PropertyInfo? dateProperty = headersType.GetProperty("Date");
+
+			if (dateProperty != null) {
+				// Get the value of the "Date" property
+				object? dateValue = dateProperty.GetValue(response.Headers);
+
+				// Check if the value is of type DateTimeOffset?
+				if (dateValue is DateTimeOffset?) {
+					return (DateTimeOffset?) dateValue;
+				}
+			}
+		}
+		catch (Exception) {
+			// ignored
+		}
+
+		return null;
+	}
+
 	private async Task<IReadOnlyCollection<RedditGameEntry>> DoDownloadUsingInstance(SimpleHttpClient client, Uri uri, CancellationToken cancellationToken) {
 		await DownloadSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		string content;
@@ -103,13 +139,7 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			else {
 				content = await resp.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-				// read the date using response headers
-				try {
-					date = resp.Response.Headers.Date ?? date;
-				}
-				catch (Exception e) when (e is MethodAccessException or TypeLoadException or MemberAccessException) {
-					// ignored
-				}
+				date = GetDateFromHeaders(resp.Response) ?? date;
 			}
 		}
 		finally {
