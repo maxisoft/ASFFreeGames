@@ -79,6 +79,7 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 	private async Task<IReadOnlyCollection<RedditGameEntry>> DoDownloadUsingInstance(SimpleHttpClient client, Uri uri, CancellationToken cancellationToken) {
 		await DownloadSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		string content;
+		DateTimeOffset date = default;
 
 		try {
 #pragma warning disable CAC001
@@ -101,6 +102,14 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 			else {
 				content = await resp.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+				// read the date using response headers
+				try {
+					date = resp.Response.Headers.Date ?? date;
+				}
+				catch (Exception e) when (e is MethodAccessException or TypeLoadException or MemberAccessException) {
+					// ignored
+				}
 			}
 		}
 		finally {
@@ -108,9 +117,15 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 		}
 
 		IReadOnlyCollection<RedlibGameEntry> entries = RedlibHtmlParser.ParseGamesFromHtml(content);
-		long now = DateTimeOffset.Now.ToUnixTimeMilliseconds(); // TODO read the date from the response's content
+		DateTimeOffset now = DateTimeOffset.Now;
 
-		return entries.Select(entry => entry.ToRedditGameEntry(now)).ToArray();
+		if ((date == default(DateTimeOffset)) || ((now - date).Duration() > TimeSpan.FromDays(1))) {
+			date = now;
+		}
+
+		long dateMillis = date.ToUnixTimeMilliseconds();
+
+		return entries.Select(entry => entry.ToRedditGameEntry(dateMillis)).ToArray();
 	}
 
 	private async Task<IReadOnlyCollection<RedditGameEntry>> DownloadUsingInstance(SimpleHttpClient client, Uri uri, uint retry, CancellationToken cancellationToken) {
