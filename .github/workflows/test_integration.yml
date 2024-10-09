@@ -128,7 +128,7 @@ jobs:
     - name: Upload 7z artifact
       continue-on-error: true
       if: always()
-      uses: actions/upload-artifact@v4.4.0
+      uses: actions/upload-artifact@v4.4.2
       with:
         name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
         path: tmp_7z/output.7z
