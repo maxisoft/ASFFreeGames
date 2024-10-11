@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,32 +14,31 @@ namespace Maxisoft.ASF.HttpClientSimple;
 #nullable enable
 
 public sealed class SimpleHttpClient : IDisposable {
-	private readonly HttpClientHandler HttpClientHandler;
+	private readonly HttpMessageHandler HttpMessageHandler;
 	private readonly HttpClient HttpClient;
 
 	public SimpleHttpClient(IWebProxy? proxy = null, long timeout = 25_000) {
-		HttpClientHandler = new HttpClientHandler {
-			AutomaticDecompression = DecompressionMethods.All,
-			MaxConnectionsPerServer = 5
-		};
+		SocketsHttpHandler handler = new();
 
-		SetCheckCertificateRevocationList(HttpClientHandler, true);
+		SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.AutomaticDecompression), DecompressionMethods.All);
+		SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.MaxConnectionsPerServer), 5, debugLogLevel: true);
+		SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.EnableMultipleHttp2Connections), true);
 
 		if (proxy is not null) {
-			HttpClientHandler.Proxy = proxy;
-			HttpClientHandler.UseProxy = true;
+			SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.Proxy), proxy);
+			SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.UseProxy), true);
 
 			if (proxy.Credentials is not null) {
-				HttpClientHandler.PreAuthenticate = true;
+				SetPropertyWithLogging(handler, nameof(SocketsHttpHandler.PreAuthenticate), true);
 			}
 		}
 
+		HttpMessageHandler = handler;
 #pragma warning disable CA5399
-		HttpClient = new HttpClient(HttpClientHandler, false) {
-			DefaultRequestVersion = HttpVersion.Version30,
-			Timeout = TimeSpan.FromMilliseconds(timeout)
-		};
+		HttpClient = new HttpClient(handler, false);
 #pragma warning restore CA5399
+		SetPropertyWithLogging(HttpClient, nameof(HttpClient.DefaultRequestVersion), HttpVersion.Version30);
+		SetPropertyWithLogging(HttpClient, nameof(HttpClient.Timeout), TimeSpan.FromMilliseconds(timeout));
 
 		SetExpectContinueProperty(HttpClient, false);
 
@@ -82,36 +80,14 @@ public sealed class SimpleHttpClient : IDisposable {
 
 	public void Dispose() {
 		HttpClient.Dispose();
-		HttpClientHandler.Dispose();
+		HttpMessageHandler.Dispose();
 	}
 
-	# region System.MissingMethodException workaround
-	private static bool SetCheckCertificateRevocationList(HttpClientHandler httpClientHandler, bool value) {
-		try {
-			// Get the type of HttpClientHandler
-			Type httpClientHandlerType = httpClientHandler.GetType();
-
-			// Get the property information
-			PropertyInfo? propertyInfo = httpClientHandlerType.GetProperty("CheckCertificateRevocationList", BindingFlags.Public | BindingFlags.Instance);
-
-			if ((propertyInfo is not null) && propertyInfo.CanWrite) {
-				// Set the property value
-				propertyInfo.SetValue(httpClientHandler, true);
-
-				return true;
-			}
-		}
-		catch (Exception ex) {
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericException(ex);
-		}
-
-		return false;
-	}
-
+	# region System.MissingMethodException workarounds
 	private static bool SetExpectContinueProperty(HttpClient httpClient, bool value) {
 		try {
 			// Get the DefaultRequestHeaders property
-			PropertyInfo? defaultRequestHeadersProperty = httpClient.GetType().GetProperty("DefaultRequestHeaders", BindingFlags.Public | BindingFlags.Instance);
+			PropertyInfo? defaultRequestHeadersProperty = httpClient.GetType().GetProperty(nameof(HttpClient.DefaultRequestHeaders), BindingFlags.Public | BindingFlags.Instance) ?? httpClient.GetType().GetProperty("DefaultRequestHeaders", BindingFlags.Public | BindingFlags.Instance);
 
 			if (defaultRequestHeadersProperty == null) {
 				throw new InvalidOperationException("HttpClient does not have DefaultRequestHeaders property.");
@@ -122,7 +98,7 @@ public sealed class SimpleHttpClient : IDisposable {
 			}
 
 			// Get the ExpectContinue property
-			PropertyInfo? expectContinueProperty = defaultRequestHeaders.GetType().GetProperty("ExpectContinue", BindingFlags.Public | BindingFlags.Instance);
+			PropertyInfo? expectContinueProperty = defaultRequestHeaders.GetType().GetProperty(nameof(HttpRequestHeaders.ExpectContinue), BindingFlags.Public | BindingFlags.Instance) ?? defaultRequestHeaders.GetType().GetProperty("ExpectContinue", BindingFlags.Public | BindingFlags.Instance);
 
 			if ((expectContinueProperty != null) && expectContinueProperty.CanWrite) {
 				expectContinueProperty.SetValue(defaultRequestHeaders, value);
@@ -135,6 +111,48 @@ public sealed class SimpleHttpClient : IDisposable {
 		}
 
 		return false;
+	}
+
+	private static bool TrySetPropertyValue<T>(T targetObject, string propertyName, object value) where T : class {
+		try {
+			// Get the type of the target object
+			Type targetType = targetObject.GetType();
+
+			// Get the property information
+			PropertyInfo? propertyInfo = targetType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+
+			if ((propertyInfo is not null) && propertyInfo.CanWrite) {
+				// Set the property value
+				propertyInfo.SetValue(targetObject, value);
+
+				return true;
+			}
+		}
+		catch (Exception ex) {
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericException(ex);
+		}
+
+		return false;
+	}
+
+	private static void SetPropertyWithLogging<T>(T targetObject, string propertyName, object value, bool debugLogLevel = false) where T : class {
+		try {
+			if (TrySetPropertyValue(targetObject, propertyName, value)) {
+				return;
+			}
+		}
+		catch (Exception) {
+			// ignored
+		}
+
+		string logMessage = $"Failed to set {targetObject.GetType().Name} property {propertyName} to {value}. Please report this issue to github.";
+
+		if (debugLogLevel) {
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug(logMessage);
+		}
+		else {
+			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericWarning(logMessage);
+		}
 	}
 	#endregion
 }
