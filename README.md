@@ -70,7 +70,9 @@ The environment variable takes precedence over the config file setting.
 The plugin supports checking for updates on GitHub. You can enable automatic updates by modifying the `PluginsUpdateList` property in your ArchiSteamFarm configuration (refer to the [ArchiSteamFarm wiki](https://github.com/JustArchiNET/ArchiSteamFarm/wiki/Configuration#pluginsupdatelist) for details).
 
 **Important note:** Enabling automatic updates for plugins can have security implications. It's recommended to thoroughly test updates in a non-production environment before enabling them on your main system.
----
+
+
+------
 ## Dev notes
 
 ### Compilation
