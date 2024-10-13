@@ -64,7 +64,15 @@ The environment variable takes precedence over the config file setting.
 ### Log is full of `Request failed after 5 attempts!` messages is there something wrong ?   
 
 - There's nothing wrong (most likely), those error messages are the result of the plugin trying to add a steam key which is unavailable. With time those errors should occurs less frequently (see [#3](https://github.com/maxisoft/ASFFreeGames/issues/3) for more details).
----
+
+
+### How to configure automatic updates for the plugin?
+The plugin supports checking for updates on GitHub. You can enable automatic updates by modifying the `PluginsUpdateList` property in your ArchiSteamFarm configuration (refer to the [ArchiSteamFarm wiki](https://github.com/JustArchiNET/ArchiSteamFarm/wiki/Configuration#pluginsupdatelist) for details).
+
+**Important note:** Enabling automatic updates for plugins can have security implications. It's recommended to thoroughly test updates in a non-production environment before enabling them on your main system.
+
+
+------
 ## Dev notes
 
 ### Compilation
