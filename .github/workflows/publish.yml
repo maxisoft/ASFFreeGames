@@ -52,6 +52,9 @@ jobs:
             seven_zip_args="-mx=1"
             zip_args="-1"
 
+            # Remove useless dlls
+            rm -rf out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/NLog.dll out/${1}/${PLUGIN_NAME}/SteamKit2.dll out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/protobuf-net.Core.dll out/${1}/${PLUGIN_NAME}/protobuf-net.dll
+
             # Include extra logic for builds marked for release
             case "$GITHUB_REF" in
                 "refs/tags/"*)

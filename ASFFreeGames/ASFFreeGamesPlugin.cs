@@ -14,6 +14,7 @@ using ASFFreeGames.Configurations;
 using JetBrains.Annotations;
 using Maxisoft.ASF.ASFExtentions;
 using Maxisoft.ASF.Configurations;
+using Maxisoft.ASF.Github;
 using Maxisoft.ASF.Utils;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
@@ -29,7 +30,7 @@ internal interface IASFFreeGamesPlugin {
 
 #pragma warning disable CA1812 // ASF uses this class during runtime
 [SuppressMessage("Design", "CA1001:Disposable fields")]
-internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware, IASFFreeGamesPlugin {
+internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotCommand2, IUpdateAware, IASFFreeGamesPlugin, IGitHubPluginUpdates {
 	internal const string StaticName = nameof(ASFFreeGamesPlugin);
 	private const int CollectGamesTimeout = 3 * 60 * 1000;
 
@@ -43,7 +44,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private static CancellationToken CancellationToken => Context.CancellationToken;
 
 	public string Name => StaticName;
-	public Version Version => typeof(ASFFreeGamesPlugin).Assembly.GetName().Version ?? throw new InvalidOperationException(nameof(Version));
+	public Version Version => GetVersion();
+
+	private static Version GetVersion() => typeof(ASFFreeGamesPlugin).Assembly.GetName().Version ?? throw new InvalidOperationException(nameof(Version));
 
 	private readonly ConcurrentHashSet<Bot> Bots = new(new BotEqualityComparer());
 	private readonly Lazy<CancellationTokenSource> CancellationTokenSourceLazy = new(static () => new CancellationTokenSource());
@@ -209,6 +212,12 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private void StartTimerIfNeeded() => CollectIntervalManager.StartTimerIfNeeded();
 
 	~ASFFreeGamesPlugin() => CollectIntervalManager.Dispose();
+	public readonly GithubPluginUpdater Updater = new(new Lazy<Version>(GetVersion));
+	string IGitHubPluginUpdates.RepositoryName => GithubPluginUpdater.RepositoryName;
+
+	bool IGitHubPluginUpdates.CanUpdate => Updater.CanUpdate;
+
+	Task<Uri?> IGitHubPluginUpdates.GetTargetReleaseURL(Version asfVersion, string asfVariant, bool asfUpdate, bool stable, bool forced) => Updater.GetTargetReleaseURL(asfVersion, asfVariant, asfUpdate, stable, forced);
 }
 
 #pragma warning restore CA1812 // ASF uses this class during runtime
