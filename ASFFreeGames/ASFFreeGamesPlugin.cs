@@ -212,12 +212,15 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private void StartTimerIfNeeded() => CollectIntervalManager.StartTimerIfNeeded();
 
 	~ASFFreeGamesPlugin() => CollectIntervalManager.Dispose();
-	public readonly GithubPluginUpdater Updater = new(new Lazy<Version>(GetVersion));
+
+	#region IGitHubPluginUpdates implementation
+	private readonly GithubPluginUpdater Updater = new(new Lazy<Version>(GetVersion));
 	string IGitHubPluginUpdates.RepositoryName => GithubPluginUpdater.RepositoryName;
 
 	bool IGitHubPluginUpdates.CanUpdate => Updater.CanUpdate;
 
 	Task<Uri?> IGitHubPluginUpdates.GetTargetReleaseURL(Version asfVersion, string asfVariant, bool asfUpdate, bool stable, bool forced) => Updater.GetTargetReleaseURL(asfVersion, asfVariant, asfUpdate, stable, forced);
+	#endregion
 }
 
 #pragma warning restore CA1812 // ASF uses this class during runtime
