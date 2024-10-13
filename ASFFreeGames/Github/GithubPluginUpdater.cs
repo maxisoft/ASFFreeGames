@@ -38,7 +38,7 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
-		if (stable && !((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() > TimeSpan.FromHours(12))) {
+		if (stable && !((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() > TimeSpan.FromHours(3))) {
 			// Skip updates that are too recent
 			return null;
 		}
