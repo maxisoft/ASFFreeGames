@@ -38,6 +38,11 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
+		if (stable && !((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() > TimeSpan.FromHours(12))) {
+			// Skip updates that are too recent
+			return null;
+		}
+
 		Version newVersion = new(releaseResponse.Tag.ToUpperInvariant().TrimStart('V'));
 
 		if (!forced && (CurrentVersion >= newVersion)) {
