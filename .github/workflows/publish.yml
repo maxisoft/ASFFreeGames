@@ -147,6 +147,14 @@ jobs:
                 $compressionArgs = '-mx=9', '-mfb=258', '-mpass=15'
             }
 
+            # Remove useless dlls
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\NLog.dll" -ErrorAction SilentlyContinue | Remove-Item
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\SteamKit2.dll" -ErrorAction SilentlyContinue | Remove-Item
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.Core.dll" -ErrorAction SilentlyContinue | Remove-Item
+            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.dll" -ErrorAction SilentlyContinue | Remove-Item
+
             # Create the final zip file
             7z a -bd -slp -tzip -mm=Deflate $compressionArgs "out\$env:PLUGIN_NAME-$variant.zip" "$env:GITHUB_WORKSPACE\out\$variant\*"
 
