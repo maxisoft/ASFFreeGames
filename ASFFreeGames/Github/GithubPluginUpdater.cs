@@ -14,16 +14,34 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 
 	private Version CurrentVersion => version.Value;
 
+	private static void LogGenericError(string message) {
+		if (string.IsNullOrEmpty(message)) {
+			return;
+		}
+
+		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"{nameof(GithubPluginUpdater)}: {message}");
+	}
+
+	private static void LogGenericDebug(string message) {
+		if (string.IsNullOrEmpty(message)) {
+			return;
+		}
+
+		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug($"{nameof(GithubPluginUpdater)}: {message}");
+	}
+
 	public async Task<Uri?> GetTargetReleaseURL(Version asfVersion, string asfVariant, bool asfUpdate, bool stable, bool forced) {
 		ArgumentNullException.ThrowIfNull(asfVersion);
 		ArgumentException.ThrowIfNullOrEmpty(asfVariant);
 
 		if (!CanUpdate) {
+			LogGenericDebug("CanUpdate is false");
+
 			return null;
 		}
 
 		if (string.IsNullOrEmpty(RepositoryName)) {
-			//ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError(Strings.FormatWarningFailedWithError(nameof(RepositoryName)));
+			LogGenericError("RepositoryName is null or empty");
 
 			return null;
 		}
@@ -31,15 +49,20 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 		ReleaseResponse? releaseResponse = await GitHubService.GetLatestRelease(RepositoryName).ConfigureAwait(false);
 
 		if (releaseResponse == null) {
+			LogGenericError("GetLatestRelease returned null");
+
 			return null;
 		}
 
 		if (releaseResponse.IsPreRelease) {
+			LogGenericError("GetLatestRelease returned pre-release");
+
 			return null;
 		}
 
-		if (stable && !((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() > TimeSpan.FromHours(3))) {
-			// Skip updates that are too recent
+		if (stable && ((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() < TimeSpan.FromHours(3))) {
+			LogGenericDebug("GetLatestRelease returned too recent");
+
 			return null;
 		}
 
@@ -48,14 +71,12 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 		if (!forced && (CurrentVersion >= newVersion)) {
 			// Allow same version to be re-updated when we're updating ASF release and more than one asset is found - potential compatibility difference
 			if ((CurrentVersion > newVersion) || !asfUpdate || (releaseResponse.Assets.Count(static asset => asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) < 2)) {
-				//ASF.ArchiLogger.LogGenericInfo(Strings.FormatPluginUpdateNotFound(Name, Version, newVersion));
-
 				return null;
 			}
 		}
 
 		if (releaseResponse.Assets.Count == 0) {
-			//ASF.ArchiLogger.LogGenericWarning(Strings.FormatPluginUpdateNoAssetFound(Name, Version, newVersion));
+			LogGenericError($"GetLatestRelease for version {newVersion} returned no assets");
 
 			return null;
 		}
@@ -63,12 +84,12 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 		ReleaseAsset? asset = releaseResponse.Assets.FirstOrDefault(static asset => asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && (asset.Size > (1 << 18)));
 
 		if ((asset == null) || !releaseResponse.Assets.Contains(asset)) {
-			//ASF.ArchiLogger.LogGenericWarning(Strings.FormatPluginUpdateNoAssetFound(Name, Version, newVersion));
+			LogGenericError($"GetLatestRelease for version {newVersion} returned no valid assets");
 
 			return null;
 		}
 
-		//.ArchiLogger.LogGenericInfo(Strings.FormatPluginUpdateFound(Name, Version, newVersion));
+		LogGenericDebug($"GetLatestRelease for version {newVersion} returned asset {asset.Name} with url {asset.DownloadURL}");
 
 		return asset.DownloadURL;
 	}
