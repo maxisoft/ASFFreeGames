@@ -155,7 +155,14 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 
 		long dateMillis = date.ToUnixTimeMilliseconds();
 
-		return entries.Select(entry => entry.ToRedditGameEntry(dateMillis)).ToArray();
+		List<RedditGameEntry> redditGameEntries = [];
+
+		// ReSharper disable once LoopCanBeConvertedToQuery
+		foreach (RedlibGameEntry entry in entries) {
+			redditGameEntries.Add(entry.ToRedditGameEntry(dateMillis));
+		}
+
+		return redditGameEntries;
 	}
 
 	private async Task<IReadOnlyCollection<RedditGameEntry>> DownloadUsingInstance(SimpleHttpClient client, Uri uri, uint retry, CancellationToken cancellationToken) {
