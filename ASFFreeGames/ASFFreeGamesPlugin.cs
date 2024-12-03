@@ -40,7 +40,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	}
 
 	// ReSharper disable once InconsistentNaming
-	private static readonly ThreadLocal<PluginContext> _context = new();
+	private static readonly Utils.Workarounds.AsyncLocal<PluginContext> _context = new();
 	private static CancellationToken CancellationToken => Context.CancellationToken;
 
 	public string Name => StaticName;
