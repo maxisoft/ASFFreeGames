@@ -40,7 +40,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	}
 
 	// ReSharper disable once InconsistentNaming
-	private static readonly AsyncLocal<PluginContext> _context = new();
+	private static readonly ThreadLocal<PluginContext> _context = new();
 	private static CancellationToken CancellationToken => Context.CancellationToken;
 
 	public string Name => StaticName;
@@ -107,7 +107,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 	public Task OnUpdateProceeding(Version currentVersion, Version newVersion) => Task.CompletedTask;
 
-	public async void CollectGamesOnClock(object? source) {
+	public void CollectGamesOnClock(object? source) {
 		CollectIntervalManager.RandomlyChangeCollectInterval(source);
 
 		if (!Context.Valid || ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count))) {
@@ -141,7 +141,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
-				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+#pragma warning disable CS1998
+				OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).GetAwaiter().GetResult(); // TODO use async
+#pragma warning restore CS1998
 			}
 		}
 	}
