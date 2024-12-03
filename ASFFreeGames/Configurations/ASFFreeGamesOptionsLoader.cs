@@ -59,13 +59,12 @@ public static class ASFFreeGamesOptionsLoader {
 		try {
 #pragma warning disable CAC001
 #pragma warning disable CA2007
-
-			// Use FileOptions.Asynchronous when creating a file stream for async operations
-			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.Asynchronous);
+			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
 #pragma warning restore CA2007
 #pragma warning restore CAC001
-			using IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(checked(fs.Length > 0 ? (int) fs.Length + 1 : 1 << 15));
-			int read = await fs.ReadAsync(buffer.Memory, cancellationToken).ConfigureAwait(false);
+			byte[] buffer = new byte[fs.Length > 0 ? (int) fs.Length + 1 : 1 << 15];
+
+			int read = await fs.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
 
 			try {
 				fs.Position = 0;
@@ -76,7 +75,8 @@ public static class ASFFreeGamesOptionsLoader {
 
 			catch (Exception) {
 				fs.Position = 0;
-				await fs.WriteAsync(buffer.Memory[..read], cancellationToken).ConfigureAwait(false);
+
+				await fs.WriteAsync(((ReadOnlyMemory<byte>) buffer)[..read], cancellationToken).ConfigureAwait(false);
 				fs.SetLength(read);
 
 				throw;
