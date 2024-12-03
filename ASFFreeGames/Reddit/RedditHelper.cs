@@ -43,7 +43,7 @@ internal static class RedditHelper {
 		}
 
 		// ReSharper disable once LoopCanBePartlyConvertedToQuery
-		foreach (JsonNode? comment in children.AsArray()) {
+		foreach (JsonNode? comment in (JsonArray) children) {
 			JsonNode? commentData = comment?["data"];
 
 			if (commentData is null) {
