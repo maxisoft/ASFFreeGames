@@ -156,9 +156,18 @@ namespace ASFFreeGames.Commands {
 		private async ValueTask<string?> HandleInternalCollectCommand(Bot? bot, string[] args, CancellationToken cancellationToken) {
 			Dictionary<string, Bot> botMap = Context.Bots.ToDictionary(static b => b.BotName.Trim(), static b => b, StringComparer.InvariantCultureIgnoreCase);
 
-			Bot[] bots = args.Skip(2).Select(botName => botMap.GetValueOrDefault(botName.Trim())).Where(static b => b is not null).ToArray()!;
+			List<Bot> bots = [];
 
-			if (bots.Length == 0) {
+			for (int i = 2; i < args.Length; i++) {
+				string botName = args[i].Trim();
+
+				// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+				if (botMap.TryGetValue(botName, out Bot? savedBot) && savedBot is not null) {
+					bots.Add(savedBot);
+				}
+			}
+
+			if (bots.Count == 0) {
 				if (bot is null) {
 					return null;
 				}
@@ -168,7 +177,7 @@ namespace ASFFreeGames.Commands {
 
 			int collected = await CollectGames(bots, ECollectGameRequestSource.Scheduled, cancellationToken).ConfigureAwait(false);
 
-			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)" + (bots.Length > 1 ? $" on {bots.Length} bots" : $" on {bots.FirstOrDefault()?.BotName}"));
+			return FormatBotResponse(bot, $"Collected a total of {collected} free game(s)" + (bots.Count > 1 ? $" on {bots.Count} bots" : $" on {bots.FirstOrDefault()?.BotName}"));
 		}
 
 		private async Task SaveOptions(CancellationToken cancellationToken) {

@@ -40,7 +40,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	}
 
 	// ReSharper disable once InconsistentNaming
-	private static readonly AsyncLocal<PluginContext> _context = new();
+	private static readonly Utils.Workarounds.AsyncLocal<PluginContext> _context = new();
 	private static CancellationToken CancellationToken => Context.CancellationToken;
 
 	public string Name => StaticName;
@@ -141,7 +141,9 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
+#pragma warning disable CS1998
 				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+#pragma warning restore CS1998
 			}
 		}
 	}
@@ -212,12 +214,15 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 	private void StartTimerIfNeeded() => CollectIntervalManager.StartTimerIfNeeded();
 
 	~ASFFreeGamesPlugin() => CollectIntervalManager.Dispose();
-	public readonly GithubPluginUpdater Updater = new(new Lazy<Version>(GetVersion));
+
+	#region IGitHubPluginUpdates implementation
+	private readonly GithubPluginUpdater Updater = new(new Lazy<Version>(GetVersion));
 	string IGitHubPluginUpdates.RepositoryName => GithubPluginUpdater.RepositoryName;
 
 	bool IGitHubPluginUpdates.CanUpdate => Updater.CanUpdate;
 
 	Task<Uri?> IGitHubPluginUpdates.GetTargetReleaseURL(Version asfVersion, string asfVariant, bool asfUpdate, bool stable, bool forced) => Updater.GetTargetReleaseURL(asfVersion, asfVariant, asfUpdate, stable, forced);
+	#endregion
 }
 
 #pragma warning restore CA1812 // ASF uses this class during runtime

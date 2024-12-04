@@ -89,10 +89,10 @@ public class RedlibInstanceList(ASFFreeGamesOptions options) : IRedlibInstanceLi
 			return [];
 		}
 
-		List<Uri> uris = new(instances.AsArray().Count);
+		List<Uri> uris = new(((JsonArray) instances).Count);
 
 		// ReSharper disable once LoopCanBePartlyConvertedToQuery
-		foreach (JsonNode? instance in instances.AsArray()) {
+		foreach (JsonNode? instance in (JsonArray) instances) {
 			JsonNode? url = instance?["url"];
 
 			if (Uri.TryCreate(url?.GetValue<string>() ?? "", UriKind.Absolute, out Uri? instanceUri) && instanceUri.Scheme is "http" or "https") {
