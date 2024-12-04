@@ -11,7 +11,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{cs,vb}]
-   dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1859.severity = none
 
 ###############################
 # C# Coding Conventions       #

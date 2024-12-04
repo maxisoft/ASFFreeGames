@@ -107,7 +107,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 	public Task OnUpdateProceeding(Version currentVersion, Version newVersion) => Task.CompletedTask;
 
-	public void CollectGamesOnClock(object? source) {
+	public async void CollectGamesOnClock(object? source) {
 		CollectIntervalManager.RandomlyChangeCollectInterval(source);
 
 		if (!Context.Valid || ((Bots.Count > 0) && (Context.Bots.Count != Bots.Count))) {
@@ -142,7 +142,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
 #pragma warning disable CS1998
-				OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).GetAwaiter().GetResult(); // TODO use async
+				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
 #pragma warning restore CS1998
 			}
 		}
