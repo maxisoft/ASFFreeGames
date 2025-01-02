@@ -212,7 +212,7 @@ jobs:
         rm -rf NLog.dll SteamKit2.dll System.IO.Hashing.dll protobuf-net.Core.dll protobuf-net.dll
         popd
 
-    - uses: actions/attest-build-provenance@v1
+    - uses: actions/attest-build-provenance@v2
       with:
         subject-path: 'attest_provenance/*'
 
