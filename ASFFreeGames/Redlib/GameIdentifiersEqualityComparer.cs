@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ASFFreeGames.ASFExtentions.Games;
+using ASFFreeGames.ASFExtensions.Games;
 
 namespace Maxisoft.ASF.Redlib;
 #pragma warning disable CA1819

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Steam;
-using ASFFreeGames.ASFExtentions.Bot;
-using Maxisoft.ASF.ASFExtentions;
+using ASFFreeGames.ASFExtensions.Bot;
+using Maxisoft.ASF.ASFExtensions;
 
 namespace Maxisoft.ASF {
 	/// <summary>

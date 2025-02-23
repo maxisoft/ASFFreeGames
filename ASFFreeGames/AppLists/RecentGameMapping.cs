@@ -4,8 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using ASFFreeGames.ASFExtentions.Games;
-using Maxisoft.ASF.ASFExtentions;
+using ASFFreeGames.ASFExtensions.Games;
+using Maxisoft.ASF.ASFExtensions;
 using Maxisoft.Utils.Collections.Spans;
 
 namespace Maxisoft.ASF.AppLists;

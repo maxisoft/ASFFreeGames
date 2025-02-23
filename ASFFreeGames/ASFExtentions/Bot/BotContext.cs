@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using ASFFreeGames.ASFExtentions.Games;
+using ASFFreeGames.ASFExtensions.Games;
 using Maxisoft.ASF;
 using Maxisoft.ASF.AppLists;
 
-namespace ASFFreeGames.ASFExtentions.Bot;
+namespace ASFFreeGames.ASFExtensions.Bot;
 
 using Bot = ArchiSteamFarm.Steam.Bot;
 

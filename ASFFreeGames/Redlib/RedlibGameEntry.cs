@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ASFFreeGames.ASFExtentions.Games;
+using ASFFreeGames.ASFExtensions.Games;
 using Maxisoft.ASF.Reddit;
 
 // ReSharper disable once CheckNamespace
