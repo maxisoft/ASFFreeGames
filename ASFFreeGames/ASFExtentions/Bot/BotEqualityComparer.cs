@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ASFFreeGames.ASFExtentions.Bot;
+namespace ASFFreeGames.ASFExtensions.Bot;
 
 using Bot = ArchiSteamFarm.Steam.Bot;
 
