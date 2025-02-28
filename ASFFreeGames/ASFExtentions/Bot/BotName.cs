@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace ASFFreeGames.ASFExtentions.Bot {
+namespace ASFFreeGames.ASFExtensions.Bot {
 	/// <summary>
 	/// Represents a readonly record struct that encapsulates bot's name (a string) and provides implicit conversion and comparison methods.
 	/// </summary>
