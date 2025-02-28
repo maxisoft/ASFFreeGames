@@ -135,15 +135,17 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			if (reorderedBots.Length == 0) {
 				ArchiLogger.LogGenericDebug("no viable bot found for freegame scheduled operation");
-
 				return;
 			}
 
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
-#pragma warning disable CS1998
-				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
-#pragma warning restore CS1998
+				try {
+					await OnBotCommand(reorderedBots[0], EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+				}
+				catch (Exception ex) {
+					ArchiLogger.LogGenericWarning($"Failed to execute scheduled free games collection: {ex.Message}");
+				}
 			}
 		}
 	}
