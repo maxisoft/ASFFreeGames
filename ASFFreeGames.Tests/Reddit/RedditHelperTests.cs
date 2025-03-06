@@ -16,7 +16,7 @@ namespace Maxisoft.ASF.Tests.Reddit;
 public sealed class RedditHelperTests {
 	[Fact]
 	public async Task TestNotEmpty() {
-		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(true);
 		Assert.NotEmpty(entries);
 	}
 
@@ -24,13 +24,13 @@ public sealed class RedditHelperTests {
 	[InlineData("s/762440")]
 	[InlineData("a/1601550")]
 	public async Task TestContains(string appid) {
-		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(true);
 		Assert.Contains(new RedditGameEntry(appid, default(ERedditGameEntryKind), long.MaxValue), entries, new GameEntryIdentifierEqualityComparer());
 	}
 
 	[Fact]
 	public async Task TestMaintainOrder() {
-		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(true);
 		int app762440 = Array.FindIndex(entries, static entry => entry.Identifier == "s/762440");
 		int app1601550 = Array.FindIndex(entries, static entry => entry.Identifier == "a/1601550");
 		Assert.InRange(app762440, 0, long.MaxValue);
@@ -43,17 +43,17 @@ public sealed class RedditHelperTests {
 
 	[Fact]
 	public async Task TestFreeToPlayParsing() {
-		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
-		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
-		Assert.True(f2pEntry.IsFreeToPlay);
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(true);
+		RedditGameEntry f2PEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
+		Assert.True(f2PEntry.IsFreeToPlay);
 
 		RedditGameEntry getEntry(string identifier) => Array.Find(entries, entry => entry.Identifier == identifier);
 
-		f2pEntry = getEntry("a/431650"); // F2P
-		Assert.True(f2pEntry.IsFreeToPlay);
+		f2PEntry = getEntry("a/431650"); // F2P
+		Assert.True(f2PEntry.IsFreeToPlay);
 
-		f2pEntry = getEntry("a/579730");
-		Assert.True(f2pEntry.IsFreeToPlay);
+		f2PEntry = getEntry("a/579730");
+		Assert.True(f2PEntry.IsFreeToPlay);
 
 		RedditGameEntry dlcEntry = getEntry("s/791643"); // DLC
 		Assert.False(dlcEntry.IsFreeToPlay);
@@ -70,17 +70,17 @@ public sealed class RedditHelperTests {
 
 	[Fact]
 	public async Task TestDlcParsing() {
-		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(false);
-		RedditGameEntry f2pEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
-		Assert.False(f2pEntry.IsForDlc);
+		RedditGameEntry[] entries = await LoadAsfinfoEntries().ConfigureAwait(true);
+		RedditGameEntry f2PEntry = Array.Find(entries, static entry => entry.Identifier == "a/1631250");
+		Assert.False(f2PEntry.IsForDlc);
 
 		RedditGameEntry getEntry(string identifier) => Array.Find(entries, entry => entry.Identifier == identifier);
 
-		f2pEntry = getEntry("a/431650"); // F2P
-		Assert.False(f2pEntry.IsForDlc);
+		f2PEntry = getEntry("a/431650"); // F2P
+		Assert.False(f2PEntry.IsForDlc);
 
-		f2pEntry = getEntry("a/579730");
-		Assert.False(f2pEntry.IsForDlc);
+		f2PEntry = getEntry("a/579730");
+		Assert.False(f2PEntry.IsForDlc);
 
 		RedditGameEntry dlcEntry = getEntry("s/791643"); // DLC
 		Assert.True(dlcEntry.IsForDlc);

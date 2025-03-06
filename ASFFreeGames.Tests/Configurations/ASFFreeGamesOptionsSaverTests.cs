@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using ASFFreeGames.Configurations;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace Maxisoft.ASF.Tests.Configurations;
 public class ASFFreeGamesOptionsSaverTests {
 	[Fact]
 #pragma warning disable CA1707
-	public async void SaveOptions_WritesValidJson_And_ParsesCorrectly() {
+	public async Task SaveOptions_WritesValidJson_ParsesCorrectly() {
 #pragma warning restore CA1707
 
 		// Arrange
@@ -34,7 +35,7 @@ public class ASFFreeGamesOptionsSaverTests {
 		using MemoryStream memoryStream = new();
 
 		// Act
-		_ = await ASFFreeGamesOptionsSaver.SaveOptions(memoryStream, options).ConfigureAwait(false);
+		_ = await ASFFreeGamesOptionsSaver.SaveOptions(memoryStream, options).ConfigureAwait(true);
 
 		// Assert - Validate UTF-8 encoding
 		memoryStream.Position = 0;

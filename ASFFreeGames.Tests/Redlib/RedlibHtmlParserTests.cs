@@ -13,8 +13,8 @@ namespace Maxisoft.ASF.Tests.Redlib;
 
 public class RedlibHtmlParserTests {
 	[Fact]
-	public async void Test() {
-		string html = await LoadHtml().ConfigureAwait(false);
+	public async Task Test() {
+		string html = await LoadHtml().ConfigureAwait(true);
 
 		// ReSharper disable once ArgumentsStyleLiteral
 		IReadOnlyCollection<RedlibGameEntry> result = RedlibHtmlParser.ParseGamesFromHtml(html, dedup: false);

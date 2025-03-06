@@ -15,9 +15,9 @@ namespace Maxisoft.ASF.Tests.Redlib;
 
 public class RedlibInstanceListTests {
 	[Fact]
-	public async void Test() {
+	public async Task Test() {
 		RedlibInstanceList lister = new(new ASFFreeGamesOptions());
-		List<Uri> uris = await RedlibInstanceList.ListFromEmbedded(default(CancellationToken)).ConfigureAwait(false);
+		List<Uri> uris = await RedlibInstanceList.ListFromEmbedded(CancellationToken.None).ConfigureAwait(true);
 
 		Assert.NotEmpty(uris);
 	}
