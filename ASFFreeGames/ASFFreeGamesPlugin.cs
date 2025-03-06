@@ -68,7 +68,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter) { CancellationTokenLazy = new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token) };
 	}
 
-	public async Task<string?> OnBotCommand(Bot bot, EAccess access, string message, string[] args, ulong steamID = 0) {
+	public async Task<string?> OnBotCommand(Bot? bot, EAccess access, string message, string[] args, ulong steamID = 0) {
 		if (!Context.Valid) {
 			CreateContext();
 		}
@@ -143,7 +143,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
 
 				try {
-					await OnBotCommand(reorderedBots[0], EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+					await OnBotCommand(null, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
 				}
 				catch (Exception ex) {
 					ArchiLogger.LogGenericWarning($"Failed to execute scheduled free games collection: {ex.Message}");
