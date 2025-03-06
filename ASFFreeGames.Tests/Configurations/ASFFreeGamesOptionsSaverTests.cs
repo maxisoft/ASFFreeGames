@@ -12,7 +12,7 @@ namespace Maxisoft.ASF.Tests.Configurations;
 public class ASFFreeGamesOptionsSaverTests {
 	[Fact]
 #pragma warning disable CA1707
-	public async Task SaveOptions_WritesValidJson_And_ParsesCorrectly() {
+	public async Task SaveOptions_WritesValidJson_ParsesCorrectly() {
 #pragma warning restore CA1707
 
 		// Arrange
