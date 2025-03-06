@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 using ArchiSteamFarm.Collections;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
-using ASFFreeGames.ASFExtentions.Bot;
+using ASFFreeGames.ASFExtensions.Bot;
 using ASFFreeGames.Commands;
 using ASFFreeGames.Configurations;
 using JetBrains.Annotations;
-using Maxisoft.ASF.ASFExtentions;
+using Maxisoft.ASF.ASFExtensions;
 using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.Github;
 using Maxisoft.ASF.Utils;
@@ -141,9 +141,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
-#pragma warning disable CS1998
-				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
-#pragma warning restore CS1998
+
+				try {
+					await OnBotCommand(reorderedBots[0], EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+				}
+				catch (Exception ex) {
+					ArchiLogger.LogGenericWarning($"Failed to execute scheduled free games collection: {ex.Message}");
+				}
 			}
 		}
 	}

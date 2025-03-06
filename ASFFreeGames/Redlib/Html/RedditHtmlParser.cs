@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using ASFFreeGames.ASFExtentions.Games;
+using ASFFreeGames.ASFExtensions.Games;
 using Maxisoft.ASF.Reddit;
 using Maxisoft.Utils.Collections.Dictionaries;
 

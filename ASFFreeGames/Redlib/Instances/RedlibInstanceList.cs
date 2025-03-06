@@ -16,108 +16,117 @@ using Maxisoft.ASF.Reddit;
 namespace Maxisoft.ASF.Redlib.Instances;
 
 [SuppressMessage("ReSharper", "RedundantNullableFlowAttribute")]
-public class RedlibInstanceList(ASFFreeGamesOptions options) : IRedlibInstanceList {
-	private const string EmbeddedFileName = "redlib_instances.json";
+public class RedlibInstanceList : IRedlibInstanceList {
+    private const string EmbeddedFileName = "redlib_instances.json";
 
-	private static readonly HashSet<string> DisabledKeywords = new(StringComparer.OrdinalIgnoreCase) {
-		"disabled",
-		"off",
-		"no",
-		"false"
-	};
+    private static readonly HashSet<string> DisabledKeywords = new(StringComparer.OrdinalIgnoreCase) {
+        "disabled",
+        "off",
+        "no",
+        "false"
+    };
 
-	public async Task<List<Uri>> ListInstances([NotNull] SimpleHttpClient httpClient, CancellationToken cancellationToken) {
-		if (IsDisabled(options.RedlibInstanceUrl)) {
-			throw new RedlibDisabledException();
-		}
+    private readonly ASFFreeGamesOptions options;
 
-		if (!Uri.TryCreate(options.RedlibInstanceUrl, UriKind.Absolute, out Uri? uri)) {
-			ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError("[FreeGames] Invalid redlib instances url: " + options.RedlibInstanceUrl);
+    public RedlibInstanceList(ASFFreeGamesOptions options) {
+        this.options = options ?? throw new ArgumentNullException(nameof(options));
+    }
 
-			return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
-		}
+    public async Task<List<Uri>> ListInstances([NotNull] SimpleHttpClient httpClient, CancellationToken cancellationToken) {
+        if (IsDisabled(options.RedlibInstanceUrl)) {
+            throw new RedlibDisabledException();
+        }
+
+        if (!Uri.TryCreate(options.RedlibInstanceUrl, UriKind.Absolute, out Uri? uri)) {
+            ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError("[FreeGames] Invalid redlib instances url: " + options.RedlibInstanceUrl);
+
+            return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
+        }
+
 #pragma warning disable CAC001
 #pragma warning disable CA2007
-		await using HttpStreamResponse response = await httpClient.GetStreamAsync(uri!, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await using HttpStreamResponse response = await httpClient.GetStreamAsync(uri!, cancellationToken: cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA2007
 #pragma warning restore CAC001
-		if (!response.StatusCode.IsSuccessCode()) {
-			return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
-		}
 
-		JsonNode? node = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
+        if (!response.StatusCode.IsSuccessCode()) {
+            return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
+        }
 
-		if (node is null) {
-			return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
-		}
+        JsonNode? node = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
 
-		CheckUpToDate(node);
+        if (node is null) {
+            return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
+        }
 
-		List<Uri> res = ParseUrls(node);
+        CheckUpToDate(node);
 
-		return res.Count > 0 ? res : await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
-	}
+        List<Uri> res = ParseUrls(node);
 
-	internal static void CheckUpToDate(JsonNode node) {
-		int currentYear = DateTime.Now.Year;
-		string updated = node["updated"]?.GetValue<string>() ?? "";
+        return res.Count > 0 ? res : await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
+    }
 
-		if (!updated.StartsWith(currentYear.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal) &&
-			!updated.StartsWith((currentYear - 1).ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) {
-			throw new RedlibOutDatedListException();
-		}
-	}
+    internal static void CheckUpToDate(JsonNode node) {
+        int currentYear = DateTime.Now.Year;
+        string updated = node["updated"]?.GetValue<string>() ?? "";
 
-	internal static async Task<List<Uri>> ListFromEmbedded(CancellationToken cancellationToken) {
-		JsonNode? node = await LoadEmbeddedInstance(cancellationToken).ConfigureAwait(false);
+        if (!updated.StartsWith(currentYear.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal) &&
+            !updated.StartsWith((currentYear - 1).ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) {
+            throw new RedlibOutDatedListException();
+        }
+    }
 
-		if (node is null) {
+    internal static async Task<List<Uri>> ListFromEmbedded(CancellationToken cancellationToken) {
+        JsonNode? node = await LoadEmbeddedInstance(cancellationToken).ConfigureAwait(false);
+
+        if (node is null) {
 #pragma warning disable CA2201
-			throw new NullReferenceException($"unable to find embedded file {EmbeddedFileName}");
+            throw new NullReferenceException($"unable to find embedded file {EmbeddedFileName}");
 #pragma warning restore CA2201
-		}
+        }
 
-		CheckUpToDate(node);
+        CheckUpToDate(node);
 
-		return ParseUrls(node);
-	}
+        return ParseUrls(node);
+    }
 
-	internal static List<Uri> ParseUrls(JsonNode json) {
-		JsonNode? instances = json["instances"];
+    internal static List<Uri> ParseUrls(JsonNode json) {
+        JsonNode? instances = json["instances"];
 
-		if (instances is null) {
-			return [];
-		}
+        if (instances is null) {
+            return new List<Uri>();
+        }
 
-		List<Uri> uris = new(((JsonArray) instances).Count);
+        List<Uri> uris = new(((JsonArray) instances).Count);
 
-		// ReSharper disable once LoopCanBePartlyConvertedToQuery
-		foreach (JsonNode? instance in (JsonArray) instances) {
-			JsonNode? url = instance?["url"];
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
+        foreach (JsonNode? instance in (JsonArray) instances) {
+            JsonNode? url = instance?["url"];
 
-			if (Uri.TryCreate(url?.GetValue<string>() ?? "", UriKind.Absolute, out Uri? instanceUri) && instanceUri.Scheme is "http" or "https") {
-				uris.Add(instanceUri);
-			}
-		}
+            if (Uri.TryCreate(url?.GetValue<string>() ?? "", UriKind.Absolute, out Uri? instanceUri) && instanceUri.Scheme is "http" or "https") {
+                uris.Add(instanceUri);
+            }
+        }
 
-		return uris;
-	}
+        return uris;
+    }
 
-	private static bool IsDisabled(string? instanceUrl) => instanceUrl is not null && DisabledKeywords.Contains(instanceUrl.Trim());
+    private static bool IsDisabled(string? instanceUrl) => instanceUrl is not null && DisabledKeywords.Contains(instanceUrl.Trim());
 
-	private static async Task<JsonNode?> LoadEmbeddedInstance(CancellationToken cancellationToken) {
-		Assembly assembly = Assembly.GetExecutingAssembly();
+    private static async Task<JsonNode?> LoadEmbeddedInstance(CancellationToken cancellationToken) {
+        Assembly assembly = Assembly.GetExecutingAssembly();
 
 #pragma warning disable CAC001
 #pragma warning disable CA2007
-		await using Stream stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.Resouces.{EmbeddedFileName}")!;
+        await using Stream stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.Resources.{EmbeddedFileName}")!;
 #pragma warning restore CA2007
 #pragma warning restore CAC001
-		using StreamReader reader = new(stream); // assume the encoding is UTF8, cannot be specified as per issue #91
-		string data = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-		return JsonNode.Parse(data);
-	}
+        using StreamReader reader = new(stream); // assume the encoding is UTF8, cannot be specified as per issue #91
+        string data = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-	private static Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) => RedditHelper.ParseJsonNode(stream, cancellationToken);
+        return JsonNode.Parse(data);
+    }
+
+    private static Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) => RedditHelper.ParseJsonNode(stream, cancellationToken);
 }

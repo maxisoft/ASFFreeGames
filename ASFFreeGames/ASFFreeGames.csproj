@@ -77,11 +77,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Resouces\" />
+	  <Folder Include="Resources\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Resouces\redlib_instances.json" />
-	  <EmbeddedResource Include="Resouces\redlib_instances.json" />
+	  <None Remove="Resources\redlib_instances.json" />
+	  <EmbeddedResource Include="Resources\redlib_instances.json" />
 	</ItemGroup>
 </Project>

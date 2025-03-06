@@ -10,9 +10,11 @@ namespace Maxisoft.ASF.Utils;
 
 #nullable enable
 
+/// <summary>
+/// Provides utility methods for generating random numbers.
+/// </summary>
 public static class RandomUtils {
 	internal sealed class GaussianRandom {
-
 		// A flag to indicate if there is a stored value for the next Gaussian number
 		private int HasNextGaussian;
 
@@ -22,6 +24,10 @@ public static class RandomUtils {
 		// The stored value for the next Gaussian number
 		private double NextGaussianValue;
 
+		/// <summary>
+		/// Fills the provided span with non-zero random bytes.
+		/// </summary>
+		/// <param name="data">The span to fill with non-zero random bytes.</param>
 		private void GetNonZeroBytes(Span<byte> data) {
 			Span<byte> bytes = stackalloc byte[sizeof(long)];
 
@@ -52,6 +58,10 @@ public static class RandomUtils {
 			}
 		}
 
+		/// <summary>
+		/// Generates a random double value.
+		/// </summary>
+		/// <returns>A random double value.</returns>
 		private double NextDouble() {
 			if (Interlocked.CompareExchange(ref HasNextGaussian, False, True) == True) {
 				return NextGaussianValue;
@@ -81,13 +91,13 @@ public static class RandomUtils {
 		}
 
 		/// <summary>
-		///     Generates a random number from a normal distribution with the specified mean and standard deviation.
+		/// Generates a random number from a normal distribution with the specified mean and standard deviation.
 		/// </summary>
 		/// <param name="mean">The mean of the normal distribution.</param>
 		/// <param name="standardDeviation">The standard deviation of the normal distribution.</param>
 		/// <returns>A random number from the normal distribution.</returns>
 		/// <remarks>
-		///     This method uses the overridden NextDouble method to get a normally distributed random number.
+		/// This method uses the overridden NextDouble method to get a normally distributed random number.
 		/// </remarks>
 		public double NextGaussian(double mean, double standardDeviation) {
 			// Use the overridden NextDouble method to get a normally distributed random

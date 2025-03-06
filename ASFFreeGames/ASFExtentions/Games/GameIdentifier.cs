@@ -2,12 +2,12 @@
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using Maxisoft.ASF.ASFExtentions;
-using Maxisoft.ASF.ASFExtentions.Games;
+using Maxisoft.ASF.ASFExtensions;
+using Maxisoft.ASF.ASFExtensions.Games;
 
 // ReSharper disable RedundantNullableFlowAttribute
 
-namespace ASFFreeGames.ASFExtentions.Games;
+namespace ASFFreeGames.ASFExtensions.Games;
 
 /// <summary>
 ///     Represents a readonly record struct that encapsulates a game identifier with a numeric ID and a type.
