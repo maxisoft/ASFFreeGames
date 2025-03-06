@@ -16,6 +16,7 @@ using Maxisoft.ASF.ASFExtensions;
 using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.Github;
 using Maxisoft.ASF.Utils;
+using Maxisoft.ASF.Utils.Workarounds;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
 
@@ -190,6 +191,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		LoggerFilter.RemoveFilters(bot);
+		BotPackageChecker.RemoveBotCache(bot);
 	}
 
 	// ReSharper disable once UnusedMethodReturnValue.Local
