@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Reflection;
 using System.Threading.Tasks;
 using ASFFreeGames.ASFExtentions.Games;
 using Maxisoft.ASF;
@@ -10,6 +11,7 @@ namespace ASFFreeGames.ASFExtentions.Bot;
 
 using Bot = ArchiSteamFarm.Steam.Bot;
 
+using static ArchiSteamFarm.Localization.Strings;
 internal sealed class BotContext : IDisposable {
 	private const ulong TriesBeforeBlacklistingGameEntry = 5;
 
@@ -74,7 +76,33 @@ internal sealed class BotContext : IDisposable {
 
 		Bot? bot = Bot.GetBot(BotIdentifier);
 
-		return bot is not null && bot.OwnedPackageIDs.ContainsKey(checked((uint) gameIdentifier.Id));
+		return bot is not null && GetBotOwnedPackages(bot).ContainsKey(checked((uint) gameIdentifier.Id));
+	}
+
+	private static Dictionary<uint, byte> GetBotOwnedPackages(Bot bot) {
+		try {
+			// Try to access OwnedPackages first (new name)
+			PropertyInfo? ownedPackagesProperty = typeof(Bot).GetProperty("OwnedPackages", BindingFlags.Instance | BindingFlags.Public);
+
+			if ((ownedPackagesProperty != null) && (ownedPackagesProperty.PropertyType == typeof(Dictionary<uint, byte>))) {
+				return (Dictionary<uint, byte>) ownedPackagesProperty.GetValue(bot)!;
+			}
+
+			// Fallback to OwnedPackageIDs (old name)
+			PropertyInfo? ownedPackageIDsProperty = typeof(Bot).GetProperty("OwnedPackageIDs", BindingFlags.Instance | BindingFlags.Public);
+
+			if ((ownedPackageIDsProperty != null) && (ownedPackageIDsProperty.PropertyType == typeof(Dictionary<uint, byte>))) {
+				return (Dictionary<uint, byte>) ownedPackageIDsProperty.GetValue(bot)!;
+			}
+
+			// If both fail, log an error
+			bot.ArchiLogger.LogGenericError("Error: property 'OwnedPackages' or 'OwnedPackageIDs' not found.");
+		}
+		catch (Exception e) {
+			bot.ArchiLogger.LogGenericException(e);
+		}
+
+		return new Dictionary<uint, byte>();
 	}
 
 	public async Task LoadFromFileSystem(CancellationToken cancellationToken = default) {

@@ -4,7 +4,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DebugSymbols>True</DebugSymbols>
 		<DebugType>pdbonly</DebugType>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -70,6 +70,9 @@
 	  </Content>
 	  <Content Include="..\Directory.Build.props">
 	    <Link>Directory.Build.props</Link>
+	  </Content>
+	  <Content Include="..\Directory.Packages.props">
+	    <Link>Directory.Packages.props</Link>
 	  </Content>
 	</ItemGroup>
 

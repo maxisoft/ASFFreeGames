@@ -12,7 +12,7 @@ public static class RedlibHtmlParser {
 	private const int MaxIdentifierPerEntry = 32;
 
 	public static IReadOnlyCollection<RedlibGameEntry> ParseGamesFromHtml(ReadOnlySpan<char> html, bool dedup = true) {
-		OrderedDictionary<RedlibGameEntry, EmptyStruct> entries = new(dedup ? new GameIdentifiersEqualityComparer() : EqualityComparer<RedlibGameEntry>.Default);
+		Maxisoft.Utils.Collections.Dictionaries.OrderedDictionary<RedlibGameEntry, EmptyStruct> entries = new(dedup ? new GameIdentifiersEqualityComparer() : EqualityComparer<RedlibGameEntry>.Default);
 		int startIndex = 0;
 
 		Span<GameIdentifier> gameIdentifiers = stackalloc GameIdentifier[MaxIdentifierPerEntry];
