@@ -8,14 +8,15 @@ using System.Threading.Tasks;
 using ArchiSteamFarm.Collections;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam;
-using ASFFreeGames.ASFExtentions.Bot;
+using ASFFreeGames.ASFExtensions.Bot;
 using ASFFreeGames.Commands;
 using ASFFreeGames.Configurations;
 using JetBrains.Annotations;
-using Maxisoft.ASF.ASFExtentions;
+using Maxisoft.ASF.ASFExtensions;
 using Maxisoft.ASF.Configurations;
 using Maxisoft.ASF.Github;
 using Maxisoft.ASF.Utils;
+using Maxisoft.ASF.Utils.Workarounds;
 using SteamKit2;
 using static ArchiSteamFarm.Core.ASF;
 
@@ -68,7 +69,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		_context.Value = new PluginContext(Bots, BotContextRegistry, Options, LoggerFilter) { CancellationTokenLazy = new Lazy<CancellationToken>(() => CancellationTokenSourceLazy.Value.Token) };
 	}
 
-	public async Task<string?> OnBotCommand(Bot bot, EAccess access, string message, string[] args, ulong steamID = 0) {
+	public async Task<string?> OnBotCommand(Bot? bot, EAccess access, string message, string[] args, ulong steamID = 0) {
 		if (!Context.Valid) {
 			CreateContext();
 		}
@@ -141,9 +142,13 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 
 			if (!cts.IsCancellationRequested) {
 				string cmd = $"FREEGAMES {FreeGamesCommand.CollectInternalCommandString} " + string.Join(' ', reorderedBots.Select(static bot => bot.BotName));
-#pragma warning disable CS1998
-				await OnBotCommand(null!, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
-#pragma warning restore CS1998
+
+				try {
+					await OnBotCommand(null, EAccess.None, cmd, cmd.Split()).ConfigureAwait(false);
+				}
+				catch (Exception ex) {
+					ArchiLogger.LogGenericWarning($"Failed to execute scheduled free games collection: {ex.Message}");
+				}
 			}
 		}
 	}
@@ -186,6 +191,7 @@ internal sealed class ASFFreeGamesPlugin : IASF, IBot, IBotConnection, IBotComma
 		}
 
 		LoggerFilter.RemoveFilters(bot);
+		BotPackageChecker.RemoveBotCache(bot);
 	}
 
 	// ReSharper disable once UnusedMethodReturnValue.Local

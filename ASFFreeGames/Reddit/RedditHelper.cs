@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ArchiSteamFarm.Core;
 using Maxisoft.ASF.HttpClientSimple;
-using Maxisoft.Utils.Collections.Dictionaries;
 
 namespace Maxisoft.ASF.Reddit;
 
@@ -32,7 +31,7 @@ internal static class RedditHelper {
 	}
 
 	internal static IReadOnlyCollection<RedditGameEntry> LoadMessages(JsonNode children) {
-		OrderedDictionary<RedditGameEntry, EmptyStruct> games = new(new GameEntryIdentifierEqualityComparer());
+		Maxisoft.Utils.Collections.Dictionaries.OrderedDictionary<RedditGameEntry, EmptyStruct> games = new(new GameEntryIdentifierEqualityComparer());
 
 		IReadOnlyCollection<RedditGameEntry> returnValue() {
 			while (games.Count is > 0 and > MaxGameEntry) {

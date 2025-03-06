@@ -172,9 +172,9 @@ public sealed class HttpStreamResponse(HttpResponseMessage response, Stream? str
 	public HttpStatusCode StatusCode => Response.StatusCode;
 
 	public async ValueTask DisposeAsync() {
-		ConfiguredValueTaskAwaitable task = HasValidStream ? Stream.DisposeAsync().ConfigureAwait(false) : ValueTask.CompletedTask.ConfigureAwait(false);
+		ValueTask task = HasValidStream ? Stream.DisposeAsync() : ValueTask.CompletedTask;
 		Response.Dispose();
-		await task;
+		await task.ConfigureAwait(false);
 	}
 
 	private static readonly Lazy<Stream> EmptyStreamLazy = new(static () => new MemoryStream([], false));

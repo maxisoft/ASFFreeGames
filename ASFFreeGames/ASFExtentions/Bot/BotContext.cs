@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
+using System.Reflection;
 using System.Threading.Tasks;
-using ASFFreeGames.ASFExtentions.Games;
+using ASFFreeGames.ASFExtensions.Games;
 using Maxisoft.ASF;
 using Maxisoft.ASF.AppLists;
+using Maxisoft.ASF.Utils.Workarounds;
 
-namespace ASFFreeGames.ASFExtentions.Bot;
+namespace ASFFreeGames.ASFExtensions.Bot;
 
 using Bot = ArchiSteamFarm.Steam.Bot;
+using static ArchiSteamFarm.Localization.Strings;
 
 internal sealed class BotContext : IDisposable {
 	private const ulong TriesBeforeBlacklistingGameEntry = 5;
@@ -74,7 +78,7 @@ internal sealed class BotContext : IDisposable {
 
 		Bot? bot = Bot.GetBot(BotIdentifier);
 
-		return bot is not null && bot.OwnedPackageIDs.ContainsKey(checked((uint) gameIdentifier.Id));
+		return bot is not null && BotPackageChecker.BotOwnsPackage(bot, checked((uint) gameIdentifier.Id));
 	}
 
 	public async Task LoadFromFileSystem(CancellationToken cancellationToken = default) {
@@ -117,4 +121,3 @@ internal sealed class BotContext : IDisposable {
 		return res;
 	}
 }
-
