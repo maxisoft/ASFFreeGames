@@ -566,6 +566,7 @@ namespace ASFFreeGames.Commands
 						int maxRetries = Options?.MaxRetryAttempts ?? 1;
 
 						bool isTransientError = false;
+						int retryAttempts = 0;
 
 						do
 						{
