@@ -69,6 +69,13 @@ namespace ASFFreeGames.Commands {
 						return await HandleInternalSaveOptionsCommand(bot, cancellationToken).ConfigureAwait(false);
 					case CollectInternalCommandString:
 						return await HandleInternalCollectCommand(bot, args, cancellationToken).ConfigureAwait(false);
+					case "SHOWBLACKLIST":
+						if (Options.Blacklist.Count == 0) {
+							return FormatBotResponse(bot, "Blacklist is empty");
+						} else {
+							string blacklistItems = string.Join(", ", Options.Blacklist);
+							return FormatBotResponse(bot, $"Current blacklist: {blacklistItems}");
+						}
 				}
 			}
 
@@ -119,7 +126,36 @@ namespace ASFFreeGames.Commands {
 						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} is now skipping dlc");
+					case "CLEARBLACKLIST":
+						Options.ClearBlacklist();
+						await SaveOptions(cancellationToken).ConfigureAwait(false);
 
+						return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} blacklist has been cleared");
+					case "REMOVEBLACKLIST":
+						if (args.Length >= 4) {
+							string identifier = args[3];
+							if (GameIdentifier.TryParse(identifier, out GameIdentifier gid)) {
+								bool removed = Options.RemoveFromBlacklist(in gid);
+								await SaveOptions(cancellationToken).ConfigureAwait(false);
+
+								if (removed) {
+									return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} removed {gid} from blacklist");
+								} else {
+									return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} could not find {gid} in blacklist");
+								}
+							} else {
+								return FormatBotResponse(bot, $"Invalid game identifier format: {identifier}");
+							}
+						} else {
+							return FormatBotResponse(bot, "Please provide a game identifier to remove from blacklist");
+						}
+					case "SHOWBLACKLIST":
+						if (Options.Blacklist.Count == 0) {
+							return FormatBotResponse(bot, "Blacklist is empty");
+						} else {
+							string blacklistItems = string.Join(", ", Options.Blacklist);
+							return FormatBotResponse(bot, $"Current blacklist: {blacklistItems}");
+						}
 					default:
 						return FormatBotResponse(bot, $"Unknown \"{args[2]}\" variable to set");
 				}
@@ -239,6 +275,9 @@ namespace ASFFreeGames.Commands {
 					PreviousSucessfulStrategy = PreviousSucessfulStrategy
 				};
 
+				// Cache of known invalid packages to avoid repeated failed attempts within the same collection run
+				HashSet<string> knownInvalidPackages = new();
+
 				try {
 #pragma warning disable CA2000
 					games = await Strategy.GetGames(strategyContext, cancellationToken).ConfigureAwait(false);
@@ -312,6 +351,14 @@ namespace ASFFreeGames.Commands {
 							continue;
 						}
 
+						// Skip packages that have already failed in this collection run
+						if (knownInvalidPackages.Contains(gid.ToString())) {
+							if (VerboseLog) {
+								bot.ArchiLogger.LogGenericDebug($"Skipping previously failed package in this run: {gid}", nameof(CollectGames));
+							}
+							continue;
+						}
+
 						string? resp;
 
 						string cmd = $"ADDLICENSE {bot.BotName} {gid}";
@@ -320,47 +367,145 @@ namespace ASFFreeGames.Commands {
 							bot.ArchiLogger.LogGenericDebug($"Trying to perform command \"{cmd}\"", nameof(CollectGames));
 						}
 
-						using (LoggerFilter.DisableLoggingForAddLicenseCommonErrors(_ => !VerboseLog && (requestSource is not ECollectGameRequestSource.RequestedByUser) && context.ShouldHideErrorLogForApp(in gid), bot)) {
-							resp = await bot.Commands.Response(EAccess.Operator, cmd).ConfigureAwait(false);
-						}
+						int retryAttempts = 0;
+						int maxRetries = Options.MaxRetryAttempts ?? 1;
+						bool isTransientError = false;
 
-						bool success = false;
+						do {
+							if (retryAttempts > 0) {
+								// Add delay before retry
+								int retryDelay = Options.RetryDelayMilliseconds ?? 2000;
+								await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
 
-						if (!string.IsNullOrWhiteSpace(resp)) {
-							success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
-							success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
-
-							if (success || VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser || !context.ShouldHideErrorLogForApp(in gid)) {
-								bot.ArchiLogger.LogGenericInfo($"[FreeGames] {resp}", nameof(CollectGames));
-							}
-						}
-
-						if (success) {
-							lock (context) {
-								context.RegisterApp(in gid);
+								if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {
+									bot.ArchiLogger.LogGenericInfo($"[FreeGames] Retry attempt {retryAttempts} for {gid}", nameof(CollectGames));
+								}
 							}
 
-							save = true;
-							res++;
-						}
-						else {
-							if ((requestSource != ECollectGameRequestSource.RequestedByUser) && (resp?.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase) ?? false)) {
-								if (VerboseLog) {
-									bot.ArchiLogger.LogGenericWarning("[FreeGames] Rate limit reached ! Skipping remaining games...", nameof(CollectGames));
+							using (LoggerFilter.DisableLoggingForAddLicenseCommonErrors(_ => !VerboseLog && (requestSource is not ECollectGameRequestSource.RequestedByUser) && context.ShouldHideErrorLogForApp(in gid), bot)) {
+								resp = await bot.Commands.Response(EAccess.Operator, cmd).ConfigureAwait(false);
+							}
+
+							bool success = false;
+
+							if (!string.IsNullOrWhiteSpace(resp)) {
+								success = resp!.Contains("collected game", StringComparison.InvariantCultureIgnoreCase);
+								success |= resp!.Contains("OK", StringComparison.InvariantCultureIgnoreCase);
+
+								// Check if this is a transient error that should be retried
+								isTransientError = !success &&
+									(resp.Contains("timeout", StringComparison.InvariantCultureIgnoreCase) ||
+									 resp.Contains("connection error", StringComparison.InvariantCultureIgnoreCase) ||
+									 resp.Contains("service unavailable", StringComparison.InvariantCultureIgnoreCase));
+
+								// Don't retry if we got a clear "Forbidden" or other definitive error
+								if (resp.Contains("Forbidden", StringComparison.InvariantCultureIgnoreCase) ||
+									resp.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase) ||
+									resp.Contains("no eligible accounts", StringComparison.InvariantCultureIgnoreCase)) {
+									isTransientError = false;
+								}
+
+								// Log the result regardless of success if it's verbose or user-requested
+								if (success || (!isTransientError && (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser || !context.ShouldHideErrorLogForApp(in gid)))) {
+									string statusMessage;
+									if (success) {
+										statusMessage = "Success";
+									} else if (resp.Contains("Forbidden", StringComparison.InvariantCultureIgnoreCase)) {
+										statusMessage = "AccessDenied/InvalidPackage";
+									} else if (resp.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase)) {
+										statusMessage = "RateLimited";
+									} else if (resp.Contains("timeout", StringComparison.InvariantCultureIgnoreCase)) {
+										statusMessage = "Timeout";
+									} else if (resp.Contains("no eligible accounts", StringComparison.InvariantCultureIgnoreCase)) {
+										statusMessage = "NoEligibleAccounts";
+									} else {
+										statusMessage = "Failed";
+									}
+
+									bot.ArchiLogger.LogGenericInfo($"[FreeGames] <{bot.BotName}> ID: {gid} | Status: {statusMessage}{(isTransientError && retryAttempts < maxRetries ? " (Will retry)" : "")}", nameof(CollectGames));
+								}
+							}
+
+							// If request was successful or this is not a transient error, break the loop
+							if (success || !isTransientError) {
+
+								if (success) {
+									lock (context) {
+										context.RegisterApp(in gid);
+									}
+
+									save = true;
+									res++;
+								}
+								else {
+									// Add the game to the processed list even if it failed with Forbidden to avoid retrying
+									if (resp?.Contains("Forbidden", StringComparison.InvariantCultureIgnoreCase) ?? false) {
+										lock (context) {
+											// Register the app as attempted but failed due to access restrictions
+											context.RegisterApp(in gid);
+										}
+										save = true;
+
+										// Add to the known invalid packages for this collection run
+										knownInvalidPackages.Add(gid.ToString());
+
+										// Optionally blacklist this game ID if auto-blacklisting is enabled
+										if (Options.AutoBlacklistForbiddenPackages ?? true) {
+											Options.AddToBlacklist(in gid);
+
+											if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {
+												bot.ArchiLogger.LogGenericInfo($"[FreeGames] Adding {gid} to blacklist due to Forbidden response", nameof(CollectGames));
+											}
+
+											// Save the updated options to persist the blacklist
+											_ = Task.Run(async () => {
+												try {
+													await SaveOptions(cancellationToken).ConfigureAwait(false);
+												} catch (Exception ex) {
+													if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {
+														bot.ArchiLogger.LogGenericWarning($"Failed to save options after blacklisting: {ex.Message}", nameof(CollectGames));
+													}
+												}
+											});
+										}
+
+										if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {
+											bot.ArchiLogger.LogGenericWarning($"[FreeGames] Access denied for {gid}. The package may no longer be available or there are restrictions.", nameof(CollectGames));
+										}
+									}
+
+									if ((requestSource != ECollectGameRequestSource.RequestedByUser) && (resp?.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase) ?? false)) {
+										if (VerboseLog) {
+											bot.ArchiLogger.LogGenericWarning("[FreeGames] Rate limit reached ! Skipping remaining games...", nameof(CollectGames));
+										}
+
+										break;
+									}
+								}
+
+								// Check if we need to update app tick counts or register invalid apps
+								if ((!success || isTransientError) && resp != null) {
+									if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
+										lock (context) {
+											context.AppTickCount(in gid, increment: true);
+										}
+									}
+
+									if (InvalidAppPurchaseRegex.Value.IsMatch(resp)) {
+										save |= context.RegisterInvalidApp(in gid);
+									}
 								}
 
 								break;
 							}
 
-							if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - time > DayInSeconds) {
-								lock (context) {
-									context.AppTickCount(in gid, increment: true);
-								}
-							}
+							retryAttempts++;
+						} while (isTransientError && retryAttempts <= maxRetries);
 
-							if (InvalidAppPurchaseRegex.Value.IsMatch(resp ?? "")) {
-								save |= context.RegisterInvalidApp(in gid);
-							}
+						// Add a delay between requests to avoid hitting rate limits
+						int delay = Options.DelayBetweenRequests ?? 500;
+						if (delay > 0) {
+							await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 						}
 					}
 

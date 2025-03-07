@@ -40,8 +40,31 @@ The plugin behavior is configurable via command
 - `freegames set f2p` to ☑️**allow** the plugin to collect **f2p** (the default)
 - `freegames set nodlc` to ⛔**prevent** the plugin from collecting **dlc**
 - `freegames set dlc` to ☑️**allow** the plugin to collect **dlc** (the default)
+- `freegames set clearblacklist` to 🗑️**clear** all entries from the **blacklist**
+- `freegames set removeblacklist s/######` to 🔄**remove** a specific package from the **blacklist**
+- `freegames set showblacklist` to 📋**display** all entries in the current **blacklist**
 
 In addition to the commands above, the configuration is stored in a 📖`config/freegames.json.config` JSON file, which one may 🖊 edit using a text editor to suit their needs.
+
+#### Additional Configuration Options
+
+The following options can be set in the `freegames.json.config` file:
+
+```json
+{
+  "autoBlacklistForbiddenPackages": true,  // Automatically blacklist packages that return Forbidden errors
+  "delayBetweenRequests": 500,            // Delay in milliseconds between license requests (helps avoid rate limits)
+  "maxRetryAttempts": 1,                  // Number of retry attempts for transient errors (like timeouts)
+  "retryDelayMilliseconds": 2000          // Delay in milliseconds before retrying a failed request
+}
+```
+
+**Option Descriptions:**
+
+- `autoBlacklistForbiddenPackages`: When true, packages that return "Forbidden" errors are automatically added to the blacklist to prevent future attempts.
+- `delayBetweenRequests`: Adds a delay between license requests to reduce the chance of hitting Steam's rate limits.
+- `maxRetryAttempts`: Number of times to retry requests that fail due to transient errors (e.g., timeouts).
+- `retryDelayMilliseconds`: How long to wait before retrying a failed request.
 
 ## Proxy Setup
 

@@ -33,6 +33,18 @@ public class ASFFreeGamesOptions {
 	[JsonPropertyName("verboseLog")]
 	public bool? VerboseLog { get; set; }
 
+	[JsonPropertyName("autoBlacklistForbiddenPackages")]
+	public bool? AutoBlacklistForbiddenPackages { get; set; } = true;
+
+	[JsonPropertyName("delayBetweenRequests")]
+	public int? DelayBetweenRequests { get; set; } = 500; // Default 500ms delay between requests
+
+	[JsonPropertyName("maxRetryAttempts")]
+	public int? MaxRetryAttempts { get; set; } = 1; // Default 1 retry attempt for transient errors
+
+	[JsonPropertyName("retryDelayMilliseconds")]
+	public int? RetryDelayMilliseconds { get; set; } = 2000; // Default 2 second delay between retries
+
 	#region IsBlacklisted
 	public bool IsBlacklisted(in GameIdentifier gid) {
 		if (Blacklist.Count <= 0) {
@@ -43,6 +55,35 @@ public class ASFFreeGamesOptions {
 	}
 
 	public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
+
+	public void AddToBlacklist(in GameIdentifier gid) {
+		if (Blacklist is HashSet<string> blacklist) {
+			blacklist.Add(gid.ToString());
+		} else {
+			Blacklist = new HashSet<string>(Blacklist) { gid.ToString() };
+		}
+	}
+
+	public bool RemoveFromBlacklist(in GameIdentifier gid) {
+		if (Blacklist is HashSet<string> blacklist) {
+			return blacklist.Remove(gid.ToString()) || blacklist.Remove(gid.Id.ToString(CultureInfo.InvariantCulture));
+		} else {
+			HashSet<string> newBlacklist = new(Blacklist);
+			bool removed = newBlacklist.Remove(gid.ToString()) || newBlacklist.Remove(gid.Id.ToString(CultureInfo.InvariantCulture));
+			if (removed) {
+				Blacklist = newBlacklist;
+			}
+			return removed;
+		}
+	}
+
+	public void ClearBlacklist() {
+		if (Blacklist is HashSet<string> blacklist) {
+			blacklist.Clear();
+		} else {
+			Blacklist = new HashSet<string>();
+		}
+	}
 	#endregion
 
 	#region proxy
