@@ -50,7 +50,10 @@ public static class BotPackageChecker {
 	}
 
 	#region Cache Configuration
-	private static readonly ConcurrentDictionary<string, ConcurrentDictionary<uint, bool>> OwnershipCache = new();
+	private static readonly ConcurrentDictionary<
+		string,
+		ConcurrentDictionary<uint, bool>
+	> OwnershipCache = new();
 	private static readonly Lock CacheLock = new();
 	private static Guid LastKnownBotAssemblyMvid;
 	#endregion
@@ -82,7 +85,8 @@ public static class BotPackageChecker {
 	}
 
 	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-	private static bool DirectOwnershipCheck(Bot bot, uint appId) => bot.OwnedPackages?.ContainsKey(appId) ?? false;
+	private static bool DirectOwnershipCheck(Bot bot, uint appId) =>
+		bot.OwnedPackages?.ContainsKey(appId) ?? false;
 	#endregion
 
 	#region Reflection Implementation
@@ -98,8 +102,9 @@ public static class BotPackageChecker {
 
 		Type dictType = ownedPackages.GetType();
 
-		Type? iDictType = dictType.GetInterface("System.Collections.Generic.IDictionary`2") ??
-			dictType.GetInterface("System.Collections.Generic.IReadOnlyDictionary`2");
+		Type? iDictType =
+			dictType.GetInterface("System.Collections.Generic.IDictionary`2")
+			?? dictType.GetInterface("System.Collections.Generic.IReadOnlyDictionary`2");
 
 		if (iDictType is null) {
 			bot.ArchiLogger.LogGenericError("Owned packages is not a recognized dictionary type");
@@ -119,7 +124,9 @@ public static class BotPackageChecker {
 			return false;
 		}
 		catch (InvalidCastException) {
-			bot.ArchiLogger.LogGenericError($"Invalid cast converting AppID {appId} to {keyType.Name}");
+			bot.ArchiLogger.LogGenericError(
+				$"Invalid cast converting AppID {appId} to {keyType.Name}"
+			);
 
 			return false;
 		}
@@ -136,7 +143,9 @@ public static class BotPackageChecker {
 			return (bool) (containsKeyMethod.Invoke(ownedPackages, [convertedKey]) ?? false);
 		}
 		catch (TargetInvocationException e) {
-			bot.ArchiLogger.LogGenericError($"Invocation of {containsKeyMethod.Name} failed: {e.InnerException?.Message ?? e.Message}");
+			bot.ArchiLogger.LogGenericError(
+				$"Invocation of {containsKeyMethod.Name} failed: {e.InnerException?.Message ?? e.Message}"
+			);
 
 			return false;
 		}
@@ -148,12 +157,16 @@ public static class BotPackageChecker {
 		}
 
 		const StringComparison comparison = StringComparison.Ordinal;
-		PropertyInfo[] properties = typeof(Bot).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+		PropertyInfo[] properties = typeof(Bot).GetProperties(
+			BindingFlags.Public | BindingFlags.Instance
+		);
 
 		// ReSharper disable once LoopCanBePartlyConvertedToQuery
 		foreach (PropertyInfo property in properties) {
-			if (property.Name.Equals("OwnedPackages", comparison) ||
-				property.Name.Equals("OwnedPackageIDs", comparison)) {
+			if (
+				property.Name.Equals("OwnedPackages", comparison)
+				|| property.Name.Equals("OwnedPackageIDs", comparison)
+			) {
 				CachedOwnershipProperty = property;
 
 				return property;

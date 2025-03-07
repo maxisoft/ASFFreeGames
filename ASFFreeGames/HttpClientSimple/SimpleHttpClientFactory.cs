@@ -8,7 +8,10 @@ using ASFFreeGames.Configurations;
 namespace Maxisoft.ASF.HttpClientSimple;
 
 public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisposable {
-	private readonly HashSet<string> DisableProxyStrings = new(StringComparer.InvariantCultureIgnoreCase) {
+	private readonly HashSet<string> DisableProxyStrings = new(
+		StringComparer.InvariantCultureIgnoreCase
+	)
+	{
 		"no",
 		"0",
 		"false",
@@ -18,7 +21,7 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		"null",
 		"off",
 		"noproxy",
-		"no-proxy"
+		"no-proxy",
 	};
 
 	private readonly Dictionary<ECacheKey, Tuple<WebProxy?, SimpleHttpClient>> Cache = new();
@@ -27,7 +30,7 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		Generic,
 		Reddit,
 		Redlib,
-		Github
+		Github,
 	}
 
 	private SimpleHttpClient CreateFor(ECacheKey key, string? proxy = null) {
@@ -43,7 +46,10 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		else if (!string.IsNullOrWhiteSpace(proxy)) {
 			webProxy = new WebProxy(proxy, BypassOnLocal: true);
 
-			if (Uri.TryCreate(proxy, UriKind.Absolute, out Uri? uri) && !string.IsNullOrWhiteSpace(uri.UserInfo)) {
+			if (
+				Uri.TryCreate(proxy, UriKind.Absolute, out Uri? uri)
+				&& !string.IsNullOrWhiteSpace(uri.UserInfo)
+			) {
 				string[] split = uri.UserInfo.Split(':');
 
 				if (split.Length == 2) {
@@ -66,7 +72,10 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 			}
 
 #pragma warning disable CA2000
-			Tuple<WebProxy?, SimpleHttpClient> tuple = new(webProxy, new SimpleHttpClient(webProxy));
+			Tuple<WebProxy?, SimpleHttpClient> tuple = new(
+				webProxy,
+				new SimpleHttpClient(webProxy)
+			);
 #pragma warning restore CA2000
 			Cache.Add(key, tuple);
 
@@ -74,8 +83,12 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		}
 	}
 
-	public SimpleHttpClient CreateForReddit() => CreateFor(ECacheKey.Reddit, options.RedditProxy ?? options.Proxy);
-	public SimpleHttpClient CreateForRedlib() => CreateFor(ECacheKey.Redlib, options.RedlibProxy ?? options.RedditProxy ?? options.Proxy);
+	public SimpleHttpClient CreateForReddit() =>
+		CreateFor(ECacheKey.Reddit, options.RedditProxy ?? options.Proxy);
+
+	public SimpleHttpClient CreateForRedlib() =>
+		CreateFor(ECacheKey.Redlib, options.RedlibProxy ?? options.RedditProxy ?? options.Proxy);
+
 	public SimpleHttpClient CreateForGithub() => CreateFor(ECacheKey.Github, options.Proxy);
 
 	public SimpleHttpClient CreateGeneric() => CreateFor(ECacheKey.Generic, options.Proxy);
