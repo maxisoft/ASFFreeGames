@@ -10,7 +10,8 @@ using Maxisoft.ASF.ASFExtensions;
 
 namespace ASFFreeGames.Configurations;
 
-public class ASFFreeGamesOptions {
+public class ASFFreeGamesOptions
+{
 	// Use TimeSpan instead of long for representing time intervals
 	[JsonPropertyName("recheckInterval")]
 	public TimeSpan RecheckInterval { get; set; } = TimeSpan.FromMinutes(30);
@@ -44,45 +45,48 @@ public class ASFFreeGamesOptions {
 
 	[JsonPropertyName("retryDelayMilliseconds")]
 	public int? RetryDelayMilliseconds { get; set; } = 2000; // Default 2 second delay between retries
-
 	#region IsBlacklisted
-	public bool IsBlacklisted(in GameIdentifier gid) {
-		if (Blacklist.Count <= 0) {
+	public bool IsBlacklisted(in GameIdentifier gid)
+	{
+		if (Blacklist.Count <= 0)
+		{
 			return false;
 		}
 
-		return Blacklist.Contains(gid.ToString()) || Blacklist.Contains(gid.Id.ToString(CultureInfo.InvariantCulture));
+		return Blacklist.Contains(gid.ToString())
+			|| Blacklist.Contains(gid.Id.ToString(CultureInfo.InvariantCulture));
 	}
 
-	public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
+	public bool IsBlacklisted(in Bot? bot) =>
+		bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
 
-	public void AddToBlacklist(in GameIdentifier gid) {
-		if (Blacklist is HashSet<string> blacklist) {
-			blacklist.Add(gid.ToString());
-		} else {
-			Blacklist = new HashSet<string>(Blacklist) { gid.ToString() };
+	public void AddToBlacklist(in GameIdentifier gid)
+	{
+		if (Blacklist is not HashSet<string> blacklist)
+		{
+			Blacklist = new HashSet<string>(Blacklist);
+			blacklist = (HashSet<string>)Blacklist;
 		}
+		((HashSet<string>)Blacklist).Add(gid.ToString());
 	}
 
-	public bool RemoveFromBlacklist(in GameIdentifier gid) {
-		if (Blacklist is HashSet<string> blacklist) {
-			return blacklist.Remove(gid.ToString()) || blacklist.Remove(gid.Id.ToString(CultureInfo.InvariantCulture));
-		} else {
-			HashSet<string> newBlacklist = new(Blacklist);
-			bool removed = newBlacklist.Remove(gid.ToString()) || newBlacklist.Remove(gid.Id.ToString(CultureInfo.InvariantCulture));
-			if (removed) {
-				Blacklist = newBlacklist;
-			}
-			return removed;
+	public bool RemoveFromBlacklist(in GameIdentifier gid)
+	{
+		if (Blacklist is not HashSet<string> blacklist)
+		{
+			Blacklist = new HashSet<string>(Blacklist);
+			blacklist = (HashSet<string>)Blacklist;
 		}
+		return ((HashSet<string>)Blacklist).Remove(gid.ToString());
 	}
 
-	public void ClearBlacklist() {
-		if (Blacklist is HashSet<string> blacklist) {
-			blacklist.Clear();
-		} else {
+	public void ClearBlacklist()
+	{
+		if (Blacklist is not HashSet<string> blacklist)
+		{
 			Blacklist = new HashSet<string>();
 		}
+		((HashSet<string>)Blacklist).Clear();
 	}
 	#endregion
 
@@ -99,6 +103,7 @@ public class ASFFreeGamesOptions {
 
 	[JsonPropertyName("redlibInstanceUrl")]
 #pragma warning disable CA1056
-	public string? RedlibInstanceUrl { get; set; } = "https://raw.githubusercontent.com/redlib-org/redlib-instances/main/instances.json";
+	public string? RedlibInstanceUrl { get; set; } =
+		"https://raw.githubusercontent.com/redlib-org/redlib-instances/main/instances.json";
 #pragma warning restore CA1056
 }

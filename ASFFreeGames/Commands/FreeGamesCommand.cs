@@ -72,7 +72,8 @@ namespace ASFFreeGames.Commands {
 					case "SHOWBLACKLIST":
 						if (Options.Blacklist.Count == 0) {
 							return FormatBotResponse(bot, "Blacklist is empty");
-						} else {
+						}
+						else {
 							string blacklistItems = string.Join(", ", Options.Blacklist);
 							return FormatBotResponse(bot, $"Current blacklist: {blacklistItems}");
 						}
@@ -134,25 +135,32 @@ namespace ASFFreeGames.Commands {
 					case "REMOVEBLACKLIST":
 						if (args.Length >= 4) {
 							string identifier = args[3];
+							if (string.IsNullOrEmpty(identifier)) {
+								return FormatBotResponse(bot, "Please provide a valid game identifier to remove from blacklist");
+							}
 							if (GameIdentifier.TryParse(identifier, out GameIdentifier gid)) {
 								bool removed = Options.RemoveFromBlacklist(in gid);
 								await SaveOptions(cancellationToken).ConfigureAwait(false);
 
 								if (removed) {
 									return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} removed {gid} from blacklist");
-								} else {
+								}
+								else {
 									return FormatBotResponse(bot, $"{ASFFreeGamesPlugin.StaticName} could not find {gid} in blacklist");
 								}
-							} else {
+							}
+							else {
 								return FormatBotResponse(bot, $"Invalid game identifier format: {identifier}");
 							}
-						} else {
+						}
+						else {
 							return FormatBotResponse(bot, "Please provide a game identifier to remove from blacklist");
 						}
 					case "SHOWBLACKLIST":
 						if (Options.Blacklist.Count == 0) {
 							return FormatBotResponse(bot, "Blacklist is empty");
-						} else {
+						}
+						else {
 							string blacklistItems = string.Join(", ", Options.Blacklist);
 							return FormatBotResponse(bot, $"Current blacklist: {blacklistItems}");
 						}
@@ -367,8 +375,8 @@ namespace ASFFreeGames.Commands {
 							bot.ArchiLogger.LogGenericDebug($"Trying to perform command \"{cmd}\"", nameof(CollectGames));
 						}
 
-						int retryAttempts = 0;
-						int maxRetries = Options.MaxRetryAttempts ?? 1;
+						int maxRetries = Options?.MaxRetryAttempts ?? 1;
+
 						bool isTransientError = false;
 
 						do {
@@ -410,15 +418,20 @@ namespace ASFFreeGames.Commands {
 									string statusMessage;
 									if (success) {
 										statusMessage = "Success";
-									} else if (resp.Contains("Forbidden", StringComparison.InvariantCultureIgnoreCase)) {
+									}
+									else if (resp.Contains("Forbidden", StringComparison.InvariantCultureIgnoreCase)) {
 										statusMessage = "AccessDenied/InvalidPackage";
-									} else if (resp.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase)) {
+									}
+									else if (resp.Contains("RateLimited", StringComparison.InvariantCultureIgnoreCase)) {
 										statusMessage = "RateLimited";
-									} else if (resp.Contains("timeout", StringComparison.InvariantCultureIgnoreCase)) {
+									}
+									else if (resp.Contains("timeout", StringComparison.InvariantCultureIgnoreCase)) {
 										statusMessage = "Timeout";
-									} else if (resp.Contains("no eligible accounts", StringComparison.InvariantCultureIgnoreCase)) {
+									}
+									else if (resp.Contains("no eligible accounts", StringComparison.InvariantCultureIgnoreCase)) {
 										statusMessage = "NoEligibleAccounts";
-									} else {
+									}
+									else {
 										statusMessage = "Failed";
 									}
 
@@ -461,12 +474,13 @@ namespace ASFFreeGames.Commands {
 											_ = Task.Run(async () => {
 												try {
 													await SaveOptions(cancellationToken).ConfigureAwait(false);
-												} catch (Exception ex) {
+												}
+												catch (Exception ex) {
 													if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {
-														bot.ArchiLogger.LogGenericWarning($"Failed to save options after blacklisting: {ex.Message}", nameof(CollectGames));
+														ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"Failed to save options after blacklisting: {ex.Message}");
 													}
 												}
-											});
+											}).ConfigureAwait(false);
 										}
 
 										if (VerboseLog || requestSource is ECollectGameRequestSource.RequestedByUser) {

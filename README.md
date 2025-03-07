@@ -15,7 +15,7 @@ ASF-FreeGames is a **[plugin](https://github.com/JustArchiNET/ArchiSteamFarm/wik
 ## Installation
 
 - 🔽 Download latest [Dll](https://github.com/maxisoft/ASFFreeGames/releases) from the release page
-- ➡️ Move the **dll** into the `plugins` folder of your *ArchiSteamFarm* installation
+- ➡️ Move the **dll** into the `plugins` folder of your _ArchiSteamFarm_ installation
 - 🔄 (re)start ArchiSteamFarm
 - 🎉 Have fun
 
@@ -52,10 +52,10 @@ The following options can be set in the `freegames.json.config` file:
 
 ```json
 {
-  "autoBlacklistForbiddenPackages": true,  // Automatically blacklist packages that return Forbidden errors
-  "delayBetweenRequests": 500,            // Delay in milliseconds between license requests (helps avoid rate limits)
-  "maxRetryAttempts": 1,                  // Number of retry attempts for transient errors (like timeouts)
-  "retryDelayMilliseconds": 2000          // Delay in milliseconds before retrying a failed request
+	"autoBlacklistForbiddenPackages": true, // Automatically blacklist packages that return Forbidden errors
+	"delayBetweenRequests": 500, // Delay in milliseconds between license requests (helps avoid rate limits)
+	"maxRetryAttempts": 1, // Number of retry attempts for transient errors (like timeouts)
+	"retryDelayMilliseconds": 2000 // Delay in milliseconds before retrying a failed request
 }
 ```
 
@@ -99,7 +99,7 @@ The plugin supports checking for updates on GitHub. You can enable automatic upd
 
 **Important note:** Enabling automatic updates for plugins can have security implications. It's recommended to thoroughly test updates in a non-production environment before enabling them on your main system.
 
-------
+---
 
 ## Dev notes
 
