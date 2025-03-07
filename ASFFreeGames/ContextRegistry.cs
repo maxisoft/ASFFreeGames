@@ -50,9 +50,14 @@ namespace Maxisoft.ASF {
 		public BotContext? GetBotContext(Bot bot) => BotContexts.GetValueOrDefault(bot.BotName);
 
 		/// <inheritdoc/>
-		public ValueTask<bool> RemoveBotContext(Bot bot) => ValueTask.FromResult(BotContexts.TryRemove(bot.BotName, out _));
+		public ValueTask<bool> RemoveBotContext(Bot bot) =>
+			ValueTask.FromResult(BotContexts.TryRemove(bot.BotName, out _));
 
 		/// <inheritdoc/>
-		public Task SaveBotContext(Bot bot, BotContext context, CancellationToken cancellationToken) => Task.FromResult(BotContexts[bot.BotName] = context);
+		public Task SaveBotContext(
+			Bot bot,
+			BotContext context,
+			CancellationToken cancellationToken
+		) => Task.FromResult(BotContexts[bot.BotName] = context);
 	}
 }

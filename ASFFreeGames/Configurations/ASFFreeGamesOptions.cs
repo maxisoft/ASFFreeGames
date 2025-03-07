@@ -10,8 +10,7 @@ using Maxisoft.ASF.ASFExtensions;
 
 namespace ASFFreeGames.Configurations;
 
-public class ASFFreeGamesOptions
-{
+public class ASFFreeGamesOptions {
 	// Use TimeSpan instead of long for representing time intervals
 	[JsonPropertyName("recheckInterval")]
 	public TimeSpan RecheckInterval { get; set; } = TimeSpan.FromMinutes(30);
@@ -46,10 +45,8 @@ public class ASFFreeGamesOptions
 	[JsonPropertyName("retryDelayMilliseconds")]
 	public int? RetryDelayMilliseconds { get; set; } = 2000; // Default 2 second delay between retries
 	#region IsBlacklisted
-	public bool IsBlacklisted(in GameIdentifier gid)
-	{
-		if (Blacklist.Count <= 0)
-		{
+	public bool IsBlacklisted(in GameIdentifier gid) {
+		if (Blacklist.Count <= 0) {
 			return false;
 		}
 
@@ -60,33 +57,27 @@ public class ASFFreeGamesOptions
 	public bool IsBlacklisted(in Bot? bot) =>
 		bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
 
-	public void AddToBlacklist(in GameIdentifier gid)
-	{
-		if (Blacklist is not HashSet<string> blacklist)
-		{
+	public void AddToBlacklist(in GameIdentifier gid) {
+		if (Blacklist is not HashSet<string> blacklist) {
 			Blacklist = new HashSet<string>(Blacklist);
-			blacklist = (HashSet<string>)Blacklist;
+			blacklist = (HashSet<string>) Blacklist;
 		}
-		((HashSet<string>)Blacklist).Add(gid.ToString());
+		((HashSet<string>) Blacklist).Add(gid.ToString());
 	}
 
-	public bool RemoveFromBlacklist(in GameIdentifier gid)
-	{
-		if (Blacklist is not HashSet<string> blacklist)
-		{
+	public bool RemoveFromBlacklist(in GameIdentifier gid) {
+		if (Blacklist is not HashSet<string> blacklist) {
 			Blacklist = new HashSet<string>(Blacklist);
-			blacklist = (HashSet<string>)Blacklist;
+			blacklist = (HashSet<string>) Blacklist;
 		}
-		return ((HashSet<string>)Blacklist).Remove(gid.ToString());
+		return ((HashSet<string>) Blacklist).Remove(gid.ToString());
 	}
 
-	public void ClearBlacklist()
-	{
-		if (Blacklist is not HashSet<string> blacklist)
-		{
+	public void ClearBlacklist() {
+		if (Blacklist is not HashSet<string> blacklist) {
 			Blacklist = new HashSet<string>();
 		}
-		((HashSet<string>)Blacklist).Clear();
+		((HashSet<string>) Blacklist).Clear();
 	}
 	#endregion
 
