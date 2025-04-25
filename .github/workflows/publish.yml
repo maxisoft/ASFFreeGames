@@ -195,7 +195,7 @@ jobs:
       uses: actions/checkout@v4.2.2
 
     - name: Download generic artifact from ubuntu-latest
-      uses: actions/download-artifact@v4.1.9
+      uses: actions/download-artifact@v4.3.0
       with:
         name: ubuntu-latest_${{ env.PLUGIN_NAME }}-generic
         path: out
