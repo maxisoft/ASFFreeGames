@@ -4,7 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Maxisoft.Utils.Collections.Spans {
-	public ref partial struct SpanDict<TKey, TValue> where TKey : notnull {
+	public ref partial struct SpanDict<TKey, TValue>
+		where TKey : notnull {
 		public readonly KeyValuePair<TKey, TValue>[] ToArray() {
 			var array = new KeyValuePair<TKey, TValue>[Count];
 			CopyTo(array, 0);
@@ -12,7 +13,8 @@ namespace Maxisoft.Utils.Collections.Spans {
 			return array;
 		}
 
-		public readonly TDictionary ToDictionary<TDictionary>() where TDictionary : IDictionary<TKey, TValue>, new() {
+		public readonly TDictionary ToDictionary<TDictionary>()
+			where TDictionary : IDictionary<TKey, TValue>, new() {
 			var dict = new TDictionary();
 
 			foreach (var pair in this) {
