@@ -7,5 +7,5 @@ namespace Maxisoft.ASF.FreeGames.Strategies;
 public enum EListFreeGamesStrategy {
 	None = 0,
 	Reddit = 1 << 0,
-	Redlib = 1 << 1
+	Redlib = 1 << 1,
 }
