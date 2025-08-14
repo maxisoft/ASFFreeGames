@@ -218,7 +218,7 @@ jobs:
 
     - name: Create GitHub release
       id: github_release
-      uses: softprops/action-gh-release@v2.2.1
+      uses: softprops/action-gh-release@v2.2.2
       with:
         tag_name: ${{ github.ref }}
         name: ${{ env.PLUGIN_NAME }} ${{ github.ref }}
