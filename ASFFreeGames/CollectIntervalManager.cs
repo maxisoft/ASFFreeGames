@@ -51,10 +51,18 @@ internal sealed class CollectIntervalManager(IASFFreeGamesPlugin plugin) : IColl
 	public void StartTimerIfNeeded() {
 		if (Timer is null) {
 			// Get a random initial delay
-			TimeSpan initialDelay = GetRandomizedTimerDelay(30, 6 * RandomizeIntervalSwitch, 1, 5 * 60);
+			TimeSpan initialDelay = GetRandomizedTimerDelay(
+				30,
+				6 * RandomizeIntervalSwitch,
+				1,
+				5 * 60
+			);
 
 			// Get a random regular delay
-			TimeSpan regularDelay = GetRandomizedTimerDelay(plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
+			TimeSpan regularDelay = GetRandomizedTimerDelay(
+				plugin.Options.RecheckInterval.TotalSeconds,
+				7 * 60 * RandomizeIntervalSwitch
+			);
 
 			// Create a new timer with the collect operation as the callback
 			Timer = new Timer(plugin.CollectGamesOnClock);
@@ -69,12 +77,18 @@ internal sealed class CollectIntervalManager(IASFFreeGamesPlugin plugin) : IColl
 	/// </summary>
 	/// <returns>The randomized delay.</returns>
 	/// <seealso cref="GetRandomizedTimerDelay(double, double, double, double)" />
-	private TimeSpan GetRandomizedTimerDelay() => GetRandomizedTimerDelay(plugin.Options.RecheckInterval.TotalSeconds, 7 * 60 * RandomizeIntervalSwitch);
+	private TimeSpan GetRandomizedTimerDelay() =>
+		GetRandomizedTimerDelay(
+			plugin.Options.RecheckInterval.TotalSeconds,
+			7 * 60 * RandomizeIntervalSwitch
+		);
 
 	public TimeSpan RandomlyChangeCollectInterval(object? source) {
 		// Calculate a random delay using GetRandomizedTimerDelay method
 		TimeSpan delay = GetRandomizedTimerDelay();
-		ResetTimer(() => new Timer(state => plugin.CollectGamesOnClock(state), source, delay, delay));
+		ResetTimer(
+			() => new Timer(state => plugin.CollectGamesOnClock(state), source, delay, delay)
+		);
 
 		return delay;
 	}
@@ -94,8 +108,14 @@ internal sealed class CollectIntervalManager(IASFFreeGamesPlugin plugin) : IColl
 	///     This method uses the NextGaussian method from the RandomUtils class to generate normally distributed random numbers.
 	///     See [Random nextGaussian() method in Java with Examples] for more details on how to implement NextGaussian in C#.
 	/// </remarks>
-	private static TimeSpan GetRandomizedTimerDelay(double meanSeconds, double stdSeconds, double minSeconds = 11 * 60, double maxSeconds = 60 * 60) {
-		double randomNumber = stdSeconds != 0 ? Random.NextGaussian(meanSeconds, stdSeconds) : meanSeconds;
+	private static TimeSpan GetRandomizedTimerDelay(
+		double meanSeconds,
+		double stdSeconds,
+		double minSeconds = 11 * 60,
+		double maxSeconds = 60 * 60
+	) {
+		double randomNumber =
+			stdSeconds != 0 ? Random.NextGaussian(meanSeconds, stdSeconds) : meanSeconds;
 
 		TimeSpan delay = TimeSpan.FromSeconds(randomNumber);
 
