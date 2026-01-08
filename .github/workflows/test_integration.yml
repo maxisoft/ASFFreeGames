@@ -6,7 +6,7 @@ on:
       - main
       - dev
   schedule:
-    - cron: '55 22 */3 * *'
+    - cron: "55 22 */3 * *"
 
   workflow_dispatch:
 
@@ -33,88 +33,88 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
-      timeout-minutes: 5
-      with:
-        submodules: recursive
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        timeout-minutes: 5
+        with:
+          submodules: recursive
 
-    - name: Setup .NET Core
-      timeout-minutes: 5
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+      - name: Setup .NET Core
+        timeout-minutes: 5
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-    - name: Verify .NET Core
-      run: dotnet --info
+      - name: Verify .NET Core
+        run: dotnet --info
 
-    - name: Build ${{ matrix.configuration }}
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 10
-        max_attempts: 10
-        shell: pwsh
-        command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo
+      - name: Build ${{ matrix.configuration }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          shell: pwsh
+          command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo
 
-    - name: Populate config.zip
-      shell: python
-      run: |
-        import base64
+      - name: Populate config.zip
+        shell: python
+        run: |
+          import base64
 
-        data = rb'''${{ secrets.CONFIGZIP_B64 }}'''
-        with open('config.zip', 'wb') as f:
-          f.write(base64.b64decode(data))
+          data = rb'''${{ secrets.CONFIGZIP_B64 }}'''
+          with open('config.zip', 'wb') as f:
+            f.write(base64.b64decode(data))
 
-    - name: Extract config.zip
-      run: unzip -qq config.zip
+      - name: Extract config.zip
+        run: unzip -qq config.zip
 
-    - name: Create plugin dir
-      run: |
-        mkdir -p plugins/ASFFreeGames
-        cp --archive -f ASFFreeGames/bin/${{ matrix.configuration }}/*/ASFFreeGames.* plugins/ASFFreeGames/
-        du -h plugins
+      - name: Create plugin dir
+        run: |
+          mkdir -p plugins/ASFFreeGames
+          cp --archive -f ASFFreeGames/bin/${{ matrix.configuration }}/*/ASFFreeGames.* plugins/ASFFreeGames/
+          du -h plugins
 
-    - name: run docker
-      shell: python
-      timeout-minutes: 60
-      run: |
-        import subprocess
-        import sys
+      - name: run docker
+        shell: python
+        timeout-minutes: 60
+        run: |
+          import subprocess
+          import sys
 
-        cmd = r"""docker run -e "ASF_CRYPTKEY=${{ secrets.ASF_CRYPTKEY }}" -v `pwd`/config:/app/config -v `pwd`/plugins:/app/plugins --name asf --pull always justarchi/archisteamfarm:${{ matrix.asf_docker_tag }}"""
+          cmd = r"""docker run -e "ASF_CRYPTKEY=${{ secrets.ASF_CRYPTKEY }}" -v `pwd`/config:/app/config -v `pwd`/plugins:/app/plugins --name asf --pull always justarchi/archisteamfarm:${{ matrix.asf_docker_tag }}"""
 
-        with open('out.txt', 'ab+') as out, subprocess.Popen(cmd, shell=True, stdout=out, stderr=out) as process:
-            def flush_out() -> str:
-              out.flush()
-              out.seek(0)
-              output = out.read()
-              output = output.decode()
-              print(output)
-              return output
+          with open('out.txt', 'ab+') as out, subprocess.Popen(cmd, shell=True, stdout=out, stderr=out) as process:
+              def flush_out() -> str:
+                out.flush()
+                out.seek(0)
+                output = out.read()
+                output = output.decode()
+                print(output)
+                return output
 
-            exit_code = None
-            try:
-                exit_code = process.wait(timeout=120)
-            except (TimeoutError, subprocess.TimeoutExpired):
-                print("Process reached timeout as expected")
-                process.kill()
-                exit_code = process.wait(timeout=10)
-                if exit_code is None:
-                    process.terminate()
-                output = flush_out()
-                assert 'CollectGames() [FreeGames] found' in output, "unable to start docker with ASFFreeGames installed"
-                sys.exit(0)
+              exit_code = None
+              try:
+                  exit_code = process.wait(timeout=120)
+              except (TimeoutError, subprocess.TimeoutExpired):
+                  print("Process reached timeout as expected")
+                  process.kill()
+                  exit_code = process.wait(timeout=10)
+                  if exit_code is None:
+                      process.terminate()
+                  output = flush_out()
+                  assert 'CollectGames() [FreeGames] found' in output, "unable to start docker with ASFFreeGames installed"
+                  sys.exit(0)
 
-            print(f'Process stopped earlier than expected with {exit_code} code', file=sys.stderr)
-            flush_out()
-            if exit_code != 0:
-                sys.exit(exit_code)
-            sys.exit(111)
+              print(f'Process stopped earlier than expected with {exit_code} code', file=sys.stderr)
+              flush_out()
+              if exit_code != 0:
+                  sys.exit(exit_code)
+              sys.exit(111)
 
-    - name: compress artifact files
-      continue-on-error: true
-      if: always()
-      run: |
+      - name: compress artifact files
+        continue-on-error: true
+        if: always()
+        run: |
           mkdir -p tmp_7z
           openssl rand -base64 32 | tr -d '\r\n' > archive_pass.txt
           echo ::add-mask::$(cat archive_pass.txt)
@@ -125,12 +125,10 @@ jobs:
           fi
           7z a -t7z -m0=lzma2 -mx=9 -mhe=on -ms=on -p"${{ secrets.SEVENZIP_PASSWORD || env.SEVENZIP_PASSWORD }}" tmp_7z/output.7z config.zip out.txt
 
-    - name: Upload 7z artifact
-      continue-on-error: true
-      if: always()
-      uses: actions/upload-artifact@v4.6.1
-      with:
-        name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
-        path: tmp_7z/output.7z
-
-
+      - name: Upload 7z artifact
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4.6.1
+        with:
+          name: ${{ matrix.configuration }}_${{ matrix.asf_docker_tag }}_stdout
+          path: tmp_7z/output.7z

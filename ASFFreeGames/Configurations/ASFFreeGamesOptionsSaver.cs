@@ -15,7 +15,12 @@ using System.Threading.Tasks;
 namespace ASFFreeGames.Configurations;
 
 public static class ASFFreeGamesOptionsSaver {
-	public static async Task<int> SaveOptions([NotNull] Stream stream, [NotNull] ASFFreeGamesOptions options, bool checkValid = true, CancellationToken cancellationToken = default) {
+	public static async Task<int> SaveOptions(
+		[NotNull] Stream stream,
+		[NotNull] ASFFreeGamesOptions options,
+		bool checkValid = true,
+		CancellationToken cancellationToken = default
+	) {
 		using IMemoryOwner<byte> memory = MemoryPool<byte>.Shared.Rent(1 << 15);
 		int written = CreateOptionsBuffer(options, memory);
 
@@ -41,16 +46,36 @@ public static class ASFFreeGamesOptionsSaver {
 		int written = 0;
 		written += WriteJsonString("{\n"u8, buffer, written);
 
-		written += WriteNameAndProperty("recheckInterval"u8, options.RecheckInterval, buffer, written);
-		written += WriteNameAndProperty("randomizeRecheckInterval"u8, options.RandomizeRecheckInterval, buffer, written);
-		written += WriteNameAndProperty("skipFreeToPlay"u8, options.SkipFreeToPlay, buffer, written);
+		written += WriteNameAndProperty(
+			"recheckInterval"u8,
+			options.RecheckInterval,
+			buffer,
+			written
+		);
+		written += WriteNameAndProperty(
+			"randomizeRecheckInterval"u8,
+			options.RandomizeRecheckInterval,
+			buffer,
+			written
+		);
+		written += WriteNameAndProperty(
+			"skipFreeToPlay"u8,
+			options.SkipFreeToPlay,
+			buffer,
+			written
+		);
 		written += WriteNameAndProperty("skipDLC"u8, options.SkipDLC, buffer, written);
 		written += WriteNameAndProperty("blacklist"u8, options.Blacklist, buffer, written);
 		written += WriteNameAndProperty("verboseLog"u8, options.VerboseLog, buffer, written);
 		written += WriteNameAndProperty("proxy"u8, options.Proxy, buffer, written);
 		written += WriteNameAndProperty("redditProxy"u8, options.RedditProxy, buffer, written);
 		written += WriteNameAndProperty("redlibProxy"u8, options.RedlibProxy, buffer, written);
-		written += WriteNameAndProperty("redlibInstanceUrl"u8, options.RedlibInstanceUrl, buffer, written);
+		written += WriteNameAndProperty(
+			"redlibInstanceUrl"u8,
+			options.RedlibInstanceUrl,
+			buffer,
+			written
+		);
 		RemoveTrailingCommaAndLineReturn(buffer, ref written);
 
 		written += WriteJsonString("\n}"u8, buffer, written);
@@ -159,7 +184,12 @@ public static class ASFFreeGamesOptionsSaver {
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveOptimization)]
-	private static int WriteNameAndProperty<T>(ReadOnlySpan<byte> name, T value, Span<byte> buffer, int written) {
+	private static int WriteNameAndProperty<T>(
+		ReadOnlySpan<byte> name,
+		T value,
+		Span<byte> buffer,
+		int written
+	) {
 		int startIndex = written;
 		written += WriteJsonString("\""u8, buffer, written);
 		written += WriteJsonString(name, buffer, written);
@@ -174,9 +204,15 @@ public static class ASFFreeGamesOptionsSaver {
 #pragma warning disable CA1308
 				bool b => WriteJsonString(b ? "true"u8 : "false"u8, buffer, written),
 #pragma warning restore CA1308
-				IReadOnlyCollection<string> collection => WriteJsonArray(collection, buffer, written),
+				IReadOnlyCollection<string> collection => WriteJsonArray(
+					collection,
+					buffer,
+					written
+				),
 				TimeSpan timeSpan => WriteEscapedJsonString(timeSpan.ToString(), buffer, written),
-				_ => throw new ArgumentException($"Unsupported type for property {Encoding.UTF8.GetString(name)}: {value.GetType()}")
+				_ => throw new ArgumentException(
+					$"Unsupported type for property {Encoding.UTF8.GetString(name)}: {value.GetType()}"
+				),
 			};
 		}
 
@@ -186,7 +222,11 @@ public static class ASFFreeGamesOptionsSaver {
 		return written - startIndex;
 	}
 
-	private static int WriteJsonArray(IEnumerable<string> collection, Span<byte> buffer, int written) {
+	private static int WriteJsonArray(
+		IEnumerable<string> collection,
+		Span<byte> buffer,
+		int written
+	) {
 		int startIndex = written;
 		written += WriteJsonString("["u8, buffer, written);
 		bool first = true;
