@@ -14,8 +14,8 @@ ASF-FreeGames is a **[plugin](https://github.com/JustArchiNET/ArchiSteamFarm/wik
 
 ## Installation
 
-- 🔽 Download latest [Dll](https://github.com/maxisoft/ASFFreeGames/releases) from the release page
-- ➡️ Move the **dll** into the `plugins` folder of your *ArchiSteamFarm* installation
+- 🔽 Download latest [ASFFreeGames-generic.zip](https://github.com/maxisoft/ASFFreeGames/releases) from the release page
+- ➡️ Extract the **ZIP** and move the **extracted folder** into the `plugins` folder of your *ArchiSteamFarm* installation
 - 🔄 (re)start ArchiSteamFarm
 - 🎉 Have fun
 
