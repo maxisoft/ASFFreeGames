@@ -10,6 +10,10 @@ public class HttpRequestRedlibException : RedlibException {
 	public required Uri? Uri { get; init; }
 
 	public HttpRequestRedlibException() { }
-	public HttpRequestRedlibException(string message) : base(message) { }
-	public HttpRequestRedlibException(string message, Exception inner) : base(message, inner) { }
+
+	public HttpRequestRedlibException(string message)
+		: base(message) { }
+
+	public HttpRequestRedlibException(string message, Exception inner)
+		: base(message, inner) { }
 }

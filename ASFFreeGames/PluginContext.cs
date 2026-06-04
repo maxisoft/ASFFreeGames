@@ -7,13 +7,20 @@ using Maxisoft.ASF.Utils;
 
 namespace Maxisoft.ASF;
 
-internal sealed record PluginContext(IReadOnlyCollection<Bot> Bots, IContextRegistry BotContexts, ASFFreeGamesOptions Options, LoggerFilter LoggerFilter, bool Valid = false) {
+internal sealed record PluginContext(
+	IReadOnlyCollection<Bot> Bots,
+	IContextRegistry BotContexts,
+	ASFFreeGamesOptions Options,
+	LoggerFilter LoggerFilter,
+	bool Valid = false
+) {
 	/// <summary>
 	/// Gets the cancellation token associated with this context.
 	/// </summary>
 	public CancellationToken CancellationToken => CancellationTokenLazy.Value;
 
-	internal Lazy<CancellationToken> CancellationTokenLazy { private get; set; } = new(static () => default(CancellationToken));
+	internal Lazy<CancellationToken> CancellationTokenLazy { private get; set; } =
+		new(static () => default(CancellationToken));
 
 	/// <summary>
 	/// A struct that implements IDisposable and temporarily changes the cancellation token of the PluginContext instance.
@@ -45,5 +52,7 @@ internal sealed record PluginContext(IReadOnlyCollection<Bot> Bots, IContextRegi
 	/// </summary>
 	/// <param name="factory">The function that creates a new cancellation token.</param>
 	/// <returns>A new instance of the <see cref="CancellationTokenChanger"/> struct.</returns>
-	public CancellationTokenChanger TemporaryChangeCancellationToken(Func<CancellationToken> factory) => new(this, factory);
+	public CancellationTokenChanger TemporaryChangeCancellationToken(
+		Func<CancellationToken> factory
+	) => new(this, factory);
 }

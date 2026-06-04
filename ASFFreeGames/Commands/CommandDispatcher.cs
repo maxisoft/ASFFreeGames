@@ -10,21 +10,33 @@ namespace ASFFreeGames.Commands {
 	// Implement the IBotCommand interface
 	internal sealed class CommandDispatcher(ASFFreeGamesOptions options) : IBotCommand, IDisposable {
 		// Declare a private field for the plugin options instance
-		private readonly ASFFreeGamesOptions Options = options ?? throw new ArgumentNullException(nameof(options));
+		private readonly ASFFreeGamesOptions Options =
+			options ?? throw new ArgumentNullException(nameof(options));
 
 		// Declare a private field for the dictionary that maps command names to IBotCommand instances
-		private readonly Dictionary<string, IBotCommand> Commands = new(StringComparer.OrdinalIgnoreCase) {
+		private readonly Dictionary<string, IBotCommand> Commands = new(
+			StringComparer.OrdinalIgnoreCase
+		)
+		{
 			{ "GETIP", new GetIPCommand() },
-			{ "FREEGAMES", new FreeGamesCommand(options) }
+			{ "FREEGAMES", new FreeGamesCommand(options) },
 		};
 
-		public async Task<string?> Execute(Bot? bot, string message, string[] args, ulong steamID = 0, CancellationToken cancellationToken = default) {
+		public async Task<string?> Execute(
+			Bot? bot,
+			string message,
+			string[] args,
+			ulong steamID = 0,
+			CancellationToken cancellationToken = default
+		) {
 			try {
 				if (args is { Length: > 0 }) {
 					// Try to get the corresponding IBotCommand instance from the commands dictionary based on the first argument
 					if (Commands.TryGetValue(args[0], out IBotCommand? command)) {
 						// Delegate the command execution to the IBotCommand instance, passing the bot and other parameters
-						return await command.Execute(bot, message, args, steamID, cancellationToken).ConfigureAwait(false);
+						return await command
+							.Execute(bot, message, args, steamID, cancellationToken)
+							.ConfigureAwait(false);
 					}
 				}
 			}
@@ -42,7 +54,9 @@ namespace ASFFreeGames.Commands {
 				}
 				else {
 					// Log a compact error message
-					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"An error occurred: {ex.GetType().Name} {ex.Message}");
+					ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError(
+						$"An error occurred: {ex.GetType().Name} {ex.Message}"
+					);
 				}
 			}
 

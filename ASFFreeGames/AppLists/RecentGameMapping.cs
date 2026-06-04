@@ -46,11 +46,14 @@ public class RecentGameMapping {
 	}
 
 	public void Reload(bool fix = false) => LoadMemories(fix);
+
 	public void Reset() => InitMemories();
 
 	internal void LoadMemories(bool allowFixes) {
 		ReadOnlySpan<byte> magicBytes = MagicBytes;
-		ReadOnlySpan<byte> magicSpan = MemoryMarshal.Cast<long, byte>(Buffer.Span)[..magicBytes.Length];
+		ReadOnlySpan<byte> magicSpan = MemoryMarshal.Cast<long, byte>(Buffer.Span)[
+			..magicBytes.Length
+		];
 
 		// ReSharper disable once LoopCanBeConvertedToQuery
 		for (int i = 0; i < magicBytes.Length; i++) {
@@ -74,7 +77,9 @@ public class RecentGameMapping {
 			throw new InvalidDataException();
 		}
 
-		SpanDict<GameIdentifier, long> dict = SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span);
+		SpanDict<GameIdentifier, long> dict = SpanDict<GameIdentifier, long>.CreateFromBuffer(
+			DictData.Span
+		);
 
 		if (dict.Count != CountRef) {
 			if (!allowFixes) {
@@ -89,17 +94,23 @@ public class RecentGameMapping {
 
 	internal ref long CountRef => ref SizeMemory.Span[0];
 
-	public SpanDict<GameIdentifier, long> Dict => SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span, null, checked((int) Count));
+	public SpanDict<GameIdentifier, long> Dict =>
+		SpanDict<GameIdentifier, long>.CreateFromBuffer(DictData.Span, null, checked((int) Count));
 
-	public bool Contains(in GameIdentifier item) => TryGetDate(in item, out long date) && (date > 0);
+	public bool Contains(in GameIdentifier item) =>
+		TryGetDate(in item, out long date) && (date > 0);
 
-	public bool ContainsInvalid(in GameIdentifier item) => TryGetDate(in item, out long date) && (date < 0);
+	public bool ContainsInvalid(in GameIdentifier item) =>
+		TryGetDate(in item, out long date) && (date < 0);
 
-	public bool TryGetDate(in GameIdentifier key, out long value) => Dict.TryGetValue(in key, out value);
+	public bool TryGetDate(in GameIdentifier key, out long value) =>
+		Dict.TryGetValue(in key, out value);
 
-	public bool Add(in GameIdentifier item) => Add(in item, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+	public bool Add(in GameIdentifier item) =>
+		Add(in item, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
-	public bool AddInvalid(in GameIdentifier item) => Add(in item, -DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+	public bool AddInvalid(in GameIdentifier item) =>
+		Add(in item, -DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
 	public bool Add(in GameIdentifier item, long date) {
 		SpanDict<GameIdentifier, long> dict = Dict;

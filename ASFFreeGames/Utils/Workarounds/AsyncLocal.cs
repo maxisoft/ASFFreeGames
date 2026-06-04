@@ -22,7 +22,6 @@ public sealed class AsyncLocal<T> {
 			AsyncLocalType ??= Type.GetType("System.Threading.AsyncLocal")
 				?.MakeGenericType(typeof(T));
 		}
-
 		catch (InvalidOperationException) {
 			// ignore
 		}
