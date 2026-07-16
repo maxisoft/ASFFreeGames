@@ -25,6 +25,11 @@
 		<NoWarn>NU1507</NoWarn>
 	</PropertyGroup>
 
+	<!-- Override ASF's TreatWarningsAsErrors for Release builds to allow nullable warnings in ASF code -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
 	<!-- Reset ASF signing settings, as we'll use our own logic -->
 	<PropertyGroup>
 		<AssemblyOriginatorKeyFile />

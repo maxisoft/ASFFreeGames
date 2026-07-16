@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Net;
 using ArchiSteamFarm.Storage;
 using ASFFreeGames.Configurations;
@@ -21,7 +20,7 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 		"no-proxy"
 	};
 
-	private readonly Dictionary<ECacheKey, Tuple<WebProxy?, SimpleHttpClient>> Cache = new();
+	private readonly Dictionary<ECacheKey, Tuple<IWebProxy?, SimpleHttpClient>> Cache = new();
 
 	private enum ECacheKey {
 		Generic,
@@ -35,38 +34,45 @@ public sealed class SimpleHttpClientFactory(ASFFreeGamesOptions options) : IDisp
 			proxy = options.Proxy;
 		}
 
-		WebProxy? webProxy;
+		IWebProxy? webProxy;
 
 		if (DisableProxyStrings.Contains(proxy ?? "")) {
 			webProxy = null;
 		}
 		else if (!string.IsNullOrWhiteSpace(proxy)) {
-			webProxy = new WebProxy(proxy, BypassOnLocal: true);
+			SimpleWebProxy simpleProxy = new(proxy, bypassOnLocal: true);
 
 			if (Uri.TryCreate(proxy, UriKind.Absolute, out Uri? uri) && !string.IsNullOrWhiteSpace(uri.UserInfo)) {
 				string[] split = uri.UserInfo.Split(':');
 
 				if (split.Length == 2) {
-					webProxy.Credentials = new NetworkCredential(split[0], split[1]);
+					simpleProxy.Credentials = new NetworkCredential(split[0], split[1]);
 				}
 			}
+
+			webProxy = simpleProxy;
 		}
 		else {
 			webProxy = ArchiSteamFarm.Core.ASF.GlobalConfig?.WebProxy;
 		}
 
 		lock (Cache) {
-			if (Cache.TryGetValue(key, out Tuple<WebProxy?, SimpleHttpClient>? cached)) {
-				if (cached.Item1?.Address == webProxy?.Address) {
+			if (Cache.TryGetValue(key, out Tuple<IWebProxy?, SimpleHttpClient>? cached)) {
+				// Use a test URI to get proxy addresses via IWebProxy interface
+				// This avoids direct WebProxy type references which cause runtime issues
+				Uri testUri = new("http://test.example.com", UriKind.Absolute);
+				Uri? cachedAddress = cached.Item1?.GetProxy(testUri);
+				Uri? currentAddress = webProxy?.GetProxy(testUri);
+
+				if (cachedAddress == currentAddress) {
 					return cached.Item2;
 				}
-				else {
-					Cache.Remove(key);
-				}
+
+				Cache.Remove(key);
 			}
 
 #pragma warning disable CA2000
-			Tuple<WebProxy?, SimpleHttpClient> tuple = new(webProxy, new SimpleHttpClient(webProxy));
+			Tuple<IWebProxy?, SimpleHttpClient> tuple = new(webProxy, new SimpleHttpClient(webProxy));
 #pragma warning restore CA2000
 			Cache.Add(key, tuple);
 
