@@ -19,7 +19,9 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return;
 		}
 
-		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError($"{nameof(GithubPluginUpdater)}: {message}");
+		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericError(
+			$"{nameof(GithubPluginUpdater)}: {message}"
+		);
 	}
 
 	private static void LogGenericDebug(string message) {
@@ -27,10 +29,18 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return;
 		}
 
-		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug($"{nameof(GithubPluginUpdater)}: {message}");
+		ArchiSteamFarm.Core.ASF.ArchiLogger.LogGenericDebug(
+			$"{nameof(GithubPluginUpdater)}: {message}"
+		);
 	}
 
-	public async Task<Uri?> GetTargetReleaseURL(Version asfVersion, string asfVariant, bool asfUpdate, bool stable, bool forced) {
+	public async Task<Uri?> GetTargetReleaseURL(
+		Version asfVersion,
+		string asfVariant,
+		bool asfUpdate,
+		bool stable,
+		bool forced
+	) {
 		ArgumentNullException.ThrowIfNull(asfVersion);
 		ArgumentException.ThrowIfNullOrEmpty(asfVariant);
 
@@ -46,7 +56,9 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
-		ReleaseResponse? releaseResponse = await GitHubService.GetLatestRelease(RepositoryName).ConfigureAwait(false);
+		ReleaseResponse? releaseResponse = await GitHubService
+			.GetLatestRelease(RepositoryName)
+			.ConfigureAwait(false);
 
 		if (releaseResponse == null) {
 			LogGenericError("GetLatestRelease returned null");
@@ -60,7 +72,10 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
-		if (stable && ((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() < TimeSpan.FromHours(3))) {
+		if (
+			stable
+			&& ((releaseResponse.PublishedAt - DateTime.UtcNow).Duration() < TimeSpan.FromHours(3))
+		) {
 			LogGenericDebug("GetLatestRelease returned too recent");
 
 			return null;
@@ -70,7 +85,15 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 
 		if (!forced && (CurrentVersion >= newVersion)) {
 			// Allow same version to be re-updated when we're updating ASF release and more than one asset is found - potential compatibility difference
-			if ((CurrentVersion > newVersion) || !asfUpdate || (releaseResponse.Assets.Count(static asset => asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) < 2)) {
+			if (
+				(CurrentVersion > newVersion)
+				|| !asfUpdate
+				|| (
+					releaseResponse.Assets.Count(static asset =>
+						asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+					) < 2
+				)
+			) {
 				return null;
 			}
 		}
@@ -81,7 +104,10 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
-		ReleaseAsset? asset = releaseResponse.Assets.FirstOrDefault(static asset => asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && (asset.Size > (1 << 18)));
+		ReleaseAsset? asset = releaseResponse.Assets.FirstOrDefault(static asset =>
+			asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+			&& (asset.Size > (1 << 18))
+		);
 
 		if ((asset == null) || !releaseResponse.Assets.Contains(asset)) {
 			LogGenericError($"GetLatestRelease for version {newVersion} returned no valid assets");
@@ -89,7 +115,9 @@ public class GithubPluginUpdater(Lazy<Version> version) {
 			return null;
 		}
 
-		LogGenericDebug($"GetLatestRelease for version {newVersion} returned asset {asset.Name} with url {asset.DownloadURL}");
+		LogGenericDebug(
+			$"GetLatestRelease for version {newVersion} returned asset {asset.Name} with url {asset.DownloadURL}"
+		);
 
 		return asset.DownloadURL;
 	}

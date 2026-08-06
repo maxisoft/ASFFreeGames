@@ -11,9 +11,14 @@ namespace Maxisoft.ASF.FreeGames.Strategies;
 public sealed class RedditListFreeGamesStrategy : IListFreeGamesStrategy {
 	public void Dispose() { }
 
-	public async Task<IReadOnlyCollection<RedditGameEntry>> GetGames([NotNull] ListFreeGamesContext context, CancellationToken cancellationToken) {
+	public async Task<IReadOnlyCollection<RedditGameEntry>> GetGames(
+		[NotNull] ListFreeGamesContext context,
+		CancellationToken cancellationToken
+	) {
 		cancellationToken.ThrowIfCancellationRequested();
 
-		return await RedditHelper.GetGames(context.HttpClient.Value, context.Retry, cancellationToken).ConfigureAwait(false);
+		return await RedditHelper
+			.GetGames(context.HttpClient.Value, context.Retry, cancellationToken)
+			.ConfigureAwait(false);
 	}
 }

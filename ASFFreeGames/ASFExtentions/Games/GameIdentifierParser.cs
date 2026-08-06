@@ -56,7 +56,7 @@ internal static class GameIdentifierParser {
 			identifierType = c switch {
 				'A' => GameIdentifierType.App,
 				'S' => GameIdentifierType.Sub,
-				_ => identifierType
+				_ => identifierType,
 			};
 		}
 
@@ -65,12 +65,18 @@ internal static class GameIdentifierParser {
 				case 0:
 					break;
 				case 1 when char.ToUpperInvariant(type[0]) == 'A':
-				case 3 when (char.ToUpperInvariant(type[0]) == 'A') && (char.ToUpperInvariant(type[1]) == 'P') && (char.ToUpperInvariant(type[2]) == 'P'):
+				case 3
+					when (char.ToUpperInvariant(type[0]) == 'A')
+						&& (char.ToUpperInvariant(type[1]) == 'P')
+						&& (char.ToUpperInvariant(type[2]) == 'P'):
 					identifierType = GameIdentifierType.App;
 
 					break;
 				case 1 when char.ToUpperInvariant(type[0]) == 'S':
-				case 3 when (char.ToUpperInvariant(type[0]) == 'S') && (char.ToUpperInvariant(type[1]) == 'U') && (char.ToUpperInvariant(type[2]) == 'B'):
+				case 3
+					when (char.ToUpperInvariant(type[0]) == 'S')
+						&& (char.ToUpperInvariant(type[1]) == 'U')
+						&& (char.ToUpperInvariant(type[2]) == 'B'):
 					identifierType = GameIdentifierType.Sub;
 
 					break;
