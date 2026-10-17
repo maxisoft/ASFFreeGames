@@ -19,26 +19,26 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
-      with:
-        submodules: recursive
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          submodules: recursive
 
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-    - name: Verify .NET Core
-      run: dotnet --info
+      - name: Verify .NET Core
+        run: dotnet --info
 
-    - name: Build ${{ matrix.configuration }}
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 10
-        max_attempts: 10
-        shell: pwsh
-        command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo --framework=${{ env.DOTNET_FRAMEWORK }}
+      - name: Build ${{ matrix.configuration }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          shell: pwsh
+          command: dotnet build -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false -p:isolate=true --nologo --framework=${{ env.DOTNET_FRAMEWORK }}
 
-    - name: Test ${{ matrix.configuration }}
-      run: dotnet test --no-build --verbosity normal -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo --framework=${{ env.DOTNET_FRAMEWORK }}
+      - name: Test ${{ matrix.configuration }}
+        run: dotnet test --no-build --verbosity normal -c "${{ matrix.configuration }}" -p:ContinuousIntegrationBuild=true -p:UseAppHost=false --nologo --framework=${{ env.DOTNET_FRAMEWORK }}

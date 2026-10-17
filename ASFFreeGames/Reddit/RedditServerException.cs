@@ -8,11 +8,14 @@ public class RedditServerException : Exception {
 	public HttpStatusCode StatusCode { get; }
 
 	// A constructor that takes a message and a status code as parameters
-	public RedditServerException(string message, HttpStatusCode statusCode) : base(message) => StatusCode = statusCode;
+	public RedditServerException(string message, HttpStatusCode statusCode)
+		: base(message) => StatusCode = statusCode;
 
 	public RedditServerException() { }
 
-	public RedditServerException(string message) : base(message) { }
+	public RedditServerException(string message)
+		: base(message) { }
 
-	public RedditServerException(string message, Exception innerException) : base(message, innerException) { }
+	public RedditServerException(string message, Exception innerException)
+		: base(message, innerException) { }
 }

@@ -31,7 +31,8 @@ namespace Maxisoft.Utils.Collections {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public int Resolve<T, TCollection>([NotNull] in ICollection<T> collection) where TCollection : ICollection<T> {
+		public int Resolve<T, TCollection>([NotNull] in ICollection<T> collection)
+			where TCollection : ICollection<T> {
 			return Resolve(collection.Count);
 		}
 
@@ -41,7 +42,8 @@ namespace Maxisoft.Utils.Collections {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public int Resolve<TCollection>(in TCollection collection) where TCollection : ICollection {
+		public int Resolve<TCollection>(in TCollection collection)
+			where TCollection : ICollection {
 			return Resolve(collection.Count);
 		}
 

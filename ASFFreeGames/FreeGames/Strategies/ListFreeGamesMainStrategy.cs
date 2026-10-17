@@ -22,7 +22,10 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 		GC.SuppressFinalize(this);
 	}
 
-	public async Task<IReadOnlyCollection<RedditGameEntry>> GetGames([NotNull] ListFreeGamesContext context, CancellationToken cancellationToken) {
+	public async Task<IReadOnlyCollection<RedditGameEntry>> GetGames(
+		[NotNull] ListFreeGamesContext context,
+		CancellationToken cancellationToken
+	) {
 		await StrategySemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
 		try {
@@ -41,23 +44,35 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 		}
 	}
 
-	private async Task<IReadOnlyCollection<RedditGameEntry>> DoGetGames([NotNull] ListFreeGamesContext context, CancellationToken cancellationToken) {
-		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+	private async Task<IReadOnlyCollection<RedditGameEntry>> DoGetGames(
+		[NotNull] ListFreeGamesContext context,
+		CancellationToken cancellationToken
+	) {
+		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(
+			cancellationToken
+		);
 		List<IDisposable> disposables = [];
 
 		try {
-			Task<IReadOnlyCollection<RedditGameEntry>> redditTask1 = FirstTryRedditStrategy(context, disposables, cts.Token);
+			Task<IReadOnlyCollection<RedditGameEntry>> redditTask1 = FirstTryRedditStrategy(
+				context,
+				disposables,
+				cts.Token
+			);
 			disposables.Add(redditTask1);
 
 			try {
-				await WaitForFirstTryRedditStrategy(context, redditTask1, cts.Token).ConfigureAwait(false);
+				await WaitForFirstTryRedditStrategy(context, redditTask1, cts.Token)
+					.ConfigureAwait(false);
 			}
 			catch (Exception) {
 				// ignored and handled below
 			}
 
 			if (redditTask1.IsCompletedSuccessfully) {
-				IReadOnlyCollection<RedditGameEntry> result = await redditTask1.ConfigureAwait(false);
+				IReadOnlyCollection<RedditGameEntry> result = await redditTask1.ConfigureAwait(
+					false
+				);
 
 				if (result.Count > 0) {
 					context.PreviousSucessfulStrategy |= EListFreeGamesStrategy.Reddit;
@@ -66,22 +81,44 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 				}
 			}
 
-			CancellationTokenSource cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+			CancellationTokenSource cts2 = CancellationTokenSource.CreateLinkedTokenSource(
+				cts.Token
+			);
 			disposables.Add(cts2);
 			cts2.CancelAfter(TimeSpan.FromSeconds(45));
 
-			Task<IReadOnlyCollection<RedditGameEntry>> redlibTask = RedlibStrategy.GetGames(context with { HttpClient = new Lazy<SimpleHttpClient>(() => context.HttpClientFactory.CreateForRedlib()) }, cts2.Token);
+			Task<IReadOnlyCollection<RedditGameEntry>> redlibTask = RedlibStrategy.GetGames(
+				context with {
+					HttpClient = new Lazy<SimpleHttpClient>(
+						() => context.HttpClientFactory.CreateForRedlib()
+					),
+				},
+				cts2.Token
+			);
 			disposables.Add(redlibTask);
 
-			Task<IReadOnlyCollection<RedditGameEntry>> redditTask2 = LastTryRedditStrategy(context, redditTask1, cts2.Token);
+			Task<IReadOnlyCollection<RedditGameEntry>> redditTask2 = LastTryRedditStrategy(
+				context,
+				redditTask1,
+				cts2.Token
+			);
 			disposables.Add(redditTask2);
 
 			context.PreviousSucessfulStrategy = EListFreeGamesStrategy.None;
 
-			Task<IReadOnlyCollection<RedditGameEntry>>[] strategiesTasks = [redditTask1, redditTask2, redlibTask]; // note that order matters
+			Task<IReadOnlyCollection<RedditGameEntry>>[] strategiesTasks =
+			[
+				redditTask1,
+				redditTask2,
+				redlibTask,
+			]; // note that order matters
 
 			try {
-				IReadOnlyCollection<RedditGameEntry>? res = await WaitForStrategiesTasks(cts.Token, strategiesTasks).ConfigureAwait(false);
+				IReadOnlyCollection<RedditGameEntry>? res = await WaitForStrategiesTasks(
+						cts.Token,
+						strategiesTasks
+					)
+					.ConfigureAwait(false);
 
 				if (res is { Count: > 0 }) {
 					return res;
@@ -110,7 +147,11 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 			}
 
 			List<Exception> exceptions = new(strategiesTasks.Length);
-			exceptions.AddRange(from task in strategiesTasks where task.IsFaulted || task.IsCanceled select IListFreeGamesStrategy.ExceptionFromTask(task));
+			exceptions.AddRange(
+				from task in strategiesTasks
+				where task.IsFaulted || task.IsCanceled
+				select IListFreeGamesStrategy.ExceptionFromTask(task)
+			);
 
 			switch (exceptions.Count) {
 				case 1:
@@ -131,8 +172,14 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 	}
 
 	// ReSharper disable once SuggestBaseTypeForParameter
-	private async Task<IReadOnlyCollection<RedditGameEntry>> FirstTryRedditStrategy(ListFreeGamesContext context, List<IDisposable> disposables, CancellationToken cancellationToken) {
-		CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+	private async Task<IReadOnlyCollection<RedditGameEntry>> FirstTryRedditStrategy(
+		ListFreeGamesContext context,
+		List<IDisposable> disposables,
+		CancellationToken cancellationToken
+	) {
+		CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(
+			cancellationToken
+		);
 		disposables.Add(cts);
 		cts.CancelAfter(TimeSpan.FromSeconds(10));
 
@@ -140,15 +187,24 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 			await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
 		}
 
-		return await RedditStrategy.GetGames(
-			context with {
-				Retry = 1,
-				HttpClient = new Lazy<SimpleHttpClient>(() => context.HttpClientFactory.CreateForReddit())
-			}, cts.Token
-		).ConfigureAwait(false);
+		return await RedditStrategy
+			.GetGames(
+				context with {
+					Retry = 1,
+					HttpClient = new Lazy<SimpleHttpClient>(
+						() => context.HttpClientFactory.CreateForReddit()
+					),
+				},
+				cts.Token
+			)
+			.ConfigureAwait(false);
 	}
 
-	private async Task<IReadOnlyCollection<RedditGameEntry>> LastTryRedditStrategy(ListFreeGamesContext context, Task firstTryTask, CancellationToken cancellationToken) {
+	private async Task<IReadOnlyCollection<RedditGameEntry>> LastTryRedditStrategy(
+		ListFreeGamesContext context,
+		Task firstTryTask,
+		CancellationToken cancellationToken
+	) {
 		if (!firstTryTask.IsCompleted) {
 			try {
 				await firstTryTask.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -160,28 +216,44 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 
 		cancellationToken.ThrowIfCancellationRequested();
 
-		return await RedditStrategy.GetGames(
-			context with {
-				Retry = checked(context.Retry - 1),
-				HttpClient = new Lazy<SimpleHttpClient>(() => context.HttpClientFactory.CreateForReddit())
-			}, cancellationToken
-		).ConfigureAwait(false);
+		return await RedditStrategy
+			.GetGames(
+				context with {
+					Retry = checked(context.Retry - 1),
+					HttpClient = new Lazy<SimpleHttpClient>(
+						() => context.HttpClientFactory.CreateForReddit()
+					),
+				},
+				cancellationToken
+			)
+			.ConfigureAwait(false);
 	}
 
-	private static async Task WaitForFirstTryRedditStrategy(ListFreeGamesContext context, Task redditTask, CancellationToken cancellationToken) {
+	private static async Task WaitForFirstTryRedditStrategy(
+		ListFreeGamesContext context,
+		Task redditTask,
+		CancellationToken cancellationToken
+	) {
 		if (context.PreviousSucessfulStrategy.HasFlag(EListFreeGamesStrategy.Reddit)) {
 			try {
-				await Task.WhenAny(redditTask, Task.Delay(2500, cancellationToken)).ConfigureAwait(false);
+				await Task.WhenAny(redditTask, Task.Delay(2500, cancellationToken))
+					.ConfigureAwait(false);
 			}
 			catch (Exception e) {
-				if (e is OperationCanceledException or TimeoutException && cancellationToken.IsCancellationRequested) {
+				if (
+					e is OperationCanceledException or TimeoutException
+					&& cancellationToken.IsCancellationRequested
+				) {
 					throw;
 				}
 			}
 		}
 	}
 
-	private static async Task<IReadOnlyCollection<RedditGameEntry>?> WaitForStrategiesTasks(CancellationToken cancellationToken, params Task<IReadOnlyCollection<RedditGameEntry>>[] p) {
+	private static async Task<IReadOnlyCollection<RedditGameEntry>?> WaitForStrategiesTasks(
+		CancellationToken cancellationToken,
+		params Task<IReadOnlyCollection<RedditGameEntry>>[] p
+	) {
 		LinkedList<Task<IReadOnlyCollection<RedditGameEntry>>> tasks = [];
 
 		foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in p) {
@@ -200,7 +272,8 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 
 			while (taskNode is not null) {
 				if (taskNode.Value.IsCompletedSuccessfully) {
-					IReadOnlyCollection<RedditGameEntry> result = await taskNode.Value.ConfigureAwait(false);
+					IReadOnlyCollection<RedditGameEntry> result =
+						await taskNode.Value.ConfigureAwait(false);
 
 					if (result.Count > 0) {
 						return result;

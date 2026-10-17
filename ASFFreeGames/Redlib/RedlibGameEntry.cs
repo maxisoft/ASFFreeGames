@@ -8,13 +8,22 @@ namespace Maxisoft.ASF.Redlib;
 
 #pragma warning disable CA1819
 
-public readonly record struct RedlibGameEntry(IReadOnlyCollection<GameIdentifier> GameIdentifiers, string CommentLink, EGameType TypeFlags, DateTimeOffset Date) {
+public readonly record struct RedlibGameEntry(
+	IReadOnlyCollection<GameIdentifier> GameIdentifiers,
+	string CommentLink,
+	EGameType TypeFlags,
+	DateTimeOffset Date
+) {
 	public RedditGameEntry ToRedditGameEntry(long date = default) {
 		if ((Date != default(DateTimeOffset)) && (Date != DateTimeOffset.MinValue)) {
 			date = Date.ToUnixTimeMilliseconds();
 		}
 
-		return new RedditGameEntry(string.Join(',', GameIdentifiers), TypeFlags.ToRedditGameEntryKind(), date);
+		return new RedditGameEntry(
+			string.Join(',', GameIdentifiers),
+			TypeFlags.ToRedditGameEntryKind(),
+			date
+		);
 	}
 }
 

@@ -19,7 +19,11 @@ namespace ASFFreeGames.ASFExtensions.Bot {
 		/// <summary>
 		/// Converts a <see cref="string"/> to a <see cref="BotName"/> instance implicitly.
 		/// </summary>
-		[SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "The constructor serves as an alternative method.")]
+		[SuppressMessage(
+			"Usage",
+			"CA2225:Operator overloads have named alternates",
+			Justification = "The constructor serves as an alternative method."
+		)]
 		public static implicit operator BotName(string value) => new BotName(value);
 
 		/// <summary>
@@ -38,8 +42,11 @@ namespace ASFFreeGames.ASFExtensions.Bot {
 
 		// Implement the relational operators using the CompareTo method
 		public static bool operator <(BotName left, BotName right) => left.CompareTo(right) < 0;
+
 		public static bool operator <=(BotName left, BotName right) => left.CompareTo(right) <= 0;
+
 		public static bool operator >(BotName left, BotName right) => left.CompareTo(right) > 0;
+
 		public static bool operator >=(BotName left, BotName right) => left.CompareTo(right) >= 0;
 	}
 }

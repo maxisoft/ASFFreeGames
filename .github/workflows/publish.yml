@@ -20,210 +20,210 @@ jobs:
             macos-latest,
             ubuntu-latest,
             #windows-latest
-        ]
+          ]
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
-      with:
-        submodules: recursive
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          submodules: recursive
 
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-    - name: Verify .NET Core
-      run: dotnet --info
+      - name: Verify .NET Core
+        run: dotnet --info
 
-    - name: Restore packages in preparation for plugin publishing
-      run: dotnet restore ${{ env.PLUGIN_NAME }} -p:ContinuousIntegrationBuild=true --nologo
+      - name: Restore packages in preparation for plugin publishing
+        run: dotnet restore ${{ env.PLUGIN_NAME }} -p:ContinuousIntegrationBuild=true --nologo
 
-    - name: Publish plugin on Unix
-      if: startsWith(matrix.os, 'macos-') || startsWith(matrix.os, 'ubuntu-')
-      env:
-        VARIANTS: generic
-      shell: sh
-      run: |
-        set -eu
+      - name: Publish plugin on Unix
+        if: startsWith(matrix.os, 'macos-') || startsWith(matrix.os, 'ubuntu-')
+        env:
+          VARIANTS: generic
+        shell: sh
+        run: |
+          set -eu
 
-        publish() {
-            dotnet publish "$PLUGIN_NAME" -c "$CONFIGURATION" -f "$NET_CORE_VERSION" -o "out/${1}/${PLUGIN_NAME}" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
+          publish() {
+              dotnet publish "$PLUGIN_NAME" -c "$CONFIGURATION" -f "$NET_CORE_VERSION" -o "out/${1}/${PLUGIN_NAME}" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
 
-            # By default use fastest compression
-            seven_zip_args="-mx=1"
-            zip_args="-1"
+              # By default use fastest compression
+              seven_zip_args="-mx=1"
+              zip_args="-1"
 
-            # Remove useless dlls
-            rm -rf out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/NLog.dll out/${1}/${PLUGIN_NAME}/SteamKit2.dll out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/protobuf-net.Core.dll out/${1}/${PLUGIN_NAME}/protobuf-net.dll
+              # Remove useless dlls
+              rm -rf out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/NLog.dll out/${1}/${PLUGIN_NAME}/SteamKit2.dll out/${1}/${PLUGIN_NAME}/System.IO.Hashing.dll out/${1}/${PLUGIN_NAME}/protobuf-net.Core.dll out/${1}/${PLUGIN_NAME}/protobuf-net.dll
 
-            # Include extra logic for builds marked for release
-            case "$GITHUB_REF" in
-                "refs/tags/"*)
-                    # Tweak compression args for release publishing
-                    seven_zip_args="-mx=9 -mfb=258 -mpass=15"
-                    zip_args="-9"
-                    ;;
-            esac
+              # Include extra logic for builds marked for release
+              case "$GITHUB_REF" in
+                  "refs/tags/"*)
+                      # Tweak compression args for release publishing
+                      seven_zip_args="-mx=9 -mfb=258 -mpass=15"
+                      zip_args="-9"
+                      ;;
+              esac
 
-            # Create the final zip file
-            case "$(uname -s)" in
-                "Darwin")
-                    # We prefer to use zip on OS X as 7z implementation on that OS doesn't handle file permissions (chmod +x)
-                    if command -v zip >/dev/null; then
-                        (
-                            cd "${GITHUB_WORKSPACE}/out/${1}"
-                            zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
-                        )
-                    elif command -v 7z >/dev/null; then
-                        7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
-                    else
-                        echo "ERROR: No supported zip tool!"
-                        return 1
-                    fi
-                    ;;
-                *)
-                    if command -v 7z >/dev/null; then
-                        7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
-                    elif command -v zip >/dev/null; then
-                        (
-                            cd "${GITHUB_WORKSPACE}/out/${1}"
-                            zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
-                        )
-                    else
-                        echo "ERROR: No supported zip tool!"
-                        return 1
-                    fi
-                    ;;
-            esac
-        }
+              # Create the final zip file
+              case "$(uname -s)" in
+                  "Darwin")
+                      # We prefer to use zip on OS X as 7z implementation on that OS doesn't handle file permissions (chmod +x)
+                      if command -v zip >/dev/null; then
+                          (
+                              cd "${GITHUB_WORKSPACE}/out/${1}"
+                              zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
+                          )
+                      elif command -v 7z >/dev/null; then
+                          7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
+                      else
+                          echo "ERROR: No supported zip tool!"
+                          return 1
+                      fi
+                      ;;
+                  *)
+                      if command -v 7z >/dev/null; then
+                          7z a -bd -slp -tzip -mm=Deflate $seven_zip_args "out/${PLUGIN_NAME}-${1}.zip" "${GITHUB_WORKSPACE}/out/${1}/*"
+                      elif command -v zip >/dev/null; then
+                          (
+                              cd "${GITHUB_WORKSPACE}/out/${1}"
+                              zip -q -r $zip_args "../${PLUGIN_NAME}-${1}.zip" .
+                          )
+                      else
+                          echo "ERROR: No supported zip tool!"
+                          return 1
+                      fi
+                      ;;
+              esac
+          }
 
-        jobs=""
+          jobs=""
 
-        for variant in $VARIANTS; do
-            publish "$variant" &
-            jobs="$jobs $!"
-        done
+          for variant in $VARIANTS; do
+              publish "$variant" &
+              jobs="$jobs $!"
+          done
 
-        for job in $jobs; do
-            wait "$job"
-        done
+          for job in $jobs; do
+              wait "$job"
+          done
 
-    - name: Publish plugin on Windows
-      if: startsWith(matrix.os, 'windows-')
-      env:
-        VARIANTS: generic
-      shell: pwsh
-      run: |
-        Set-StrictMode -Version Latest
-        $ErrorActionPreference = 'Stop'
-        $ProgressPreference = 'SilentlyContinue'
+      - name: Publish plugin on Windows
+        if: startsWith(matrix.os, 'windows-')
+        env:
+          VARIANTS: generic
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
 
-        $PublishBlock = {
-            param($variant)
+          $PublishBlock = {
+              param($variant)
 
-            Set-StrictMode -Version Latest
-            $ErrorActionPreference = 'Stop'
-            $ProgressPreference = 'SilentlyContinue'
+              Set-StrictMode -Version Latest
+              $ErrorActionPreference = 'Stop'
+              $ProgressPreference = 'SilentlyContinue'
 
-            Set-Location "$env:GITHUB_WORKSPACE"
+              Set-Location "$env:GITHUB_WORKSPACE"
 
-            if ($variant -like '*-netf') {
-                $targetFramework = $env:NET_FRAMEWORK_VERSION
-            } else {
-                $targetFramework = $env:NET_CORE_VERSION
-            }
+              if ($variant -like '*-netf') {
+                  $targetFramework = $env:NET_FRAMEWORK_VERSION
+              } else {
+                  $targetFramework = $env:NET_CORE_VERSION
+              }
 
-            dotnet publish "$env:PLUGIN_NAME" -c "$env:CONFIGURATION" -f "$targetFramework" -o "out\$variant\$env:PLUGIN_NAME" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
+              dotnet publish "$env:PLUGIN_NAME" -c "$env:CONFIGURATION" -f "$targetFramework" -o "out\$variant\$env:PLUGIN_NAME" -p:ContinuousIntegrationBuild=true -p:TargetLatestRuntimePatch=false -p:UseAppHost=false --no-restore --nologo
 
-            if ($LastExitCode -ne 0) {
-                throw "Last command failed."
-            }
+              if ($LastExitCode -ne 0) {
+                  throw "Last command failed."
+              }
 
-            # By default use fastest compression
-            $compressionArgs = '-mx=1'
+              # By default use fastest compression
+              $compressionArgs = '-mx=1'
 
-            # Include extra logic for builds marked for release
-            if ($env:GITHUB_REF -like 'refs/tags/*') {
-                # Tweak compression args for release publishing
-                $compressionArgs = '-mx=9', '-mfb=258', '-mpass=15'
-            }
+              # Include extra logic for builds marked for release
+              if ($env:GITHUB_REF -like 'refs/tags/*') {
+                  # Tweak compression args for release publishing
+                  $compressionArgs = '-mx=9', '-mfb=258', '-mpass=15'
+              }
 
-            # Remove useless dlls
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\NLog.dll" -ErrorAction SilentlyContinue | Remove-Item
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\SteamKit2.dll" -ErrorAction SilentlyContinue | Remove-Item
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.Core.dll" -ErrorAction SilentlyContinue | Remove-Item
-            Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.dll" -ErrorAction SilentlyContinue | Remove-Item
+              # Remove useless dlls
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\NLog.dll" -ErrorAction SilentlyContinue | Remove-Item
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\SteamKit2.dll" -ErrorAction SilentlyContinue | Remove-Item
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\System.IO.Hashing.dll" -ErrorAction SilentlyContinue | Remove-Item
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.Core.dll" -ErrorAction SilentlyContinue | Remove-Item
+              Get-Item "$env:GITHUB_WORKSPACE\out\$variant\$env:PLUGIN_NAME\protobuf-net.dll" -ErrorAction SilentlyContinue | Remove-Item
 
-            # Create the final zip file
-            7z a -bd -slp -tzip -mm=Deflate $compressionArgs "out\$env:PLUGIN_NAME-$variant.zip" "$env:GITHUB_WORKSPACE\out\$variant\*"
+              # Create the final zip file
+              7z a -bd -slp -tzip -mm=Deflate $compressionArgs "out\$env:PLUGIN_NAME-$variant.zip" "$env:GITHUB_WORKSPACE\out\$variant\*"
 
-            if ($LastExitCode -ne 0) {
-                throw "Last command failed."
-            }
-        }
+              if ($LastExitCode -ne 0) {
+                  throw "Last command failed."
+              }
+          }
 
-        foreach ($variant in $env:VARIANTS.Split([char[]] $null, [System.StringSplitOptions]::RemoveEmptyEntries)) {
-            Start-Job -Name "$variant" $PublishBlock -ArgumentList "$variant"
-        }
+          foreach ($variant in $env:VARIANTS.Split([char[]] $null, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+              Start-Job -Name "$variant" $PublishBlock -ArgumentList "$variant"
+          }
 
-        Get-Job | Receive-Job -Wait
+          Get-Job | Receive-Job -Wait
 
-    - name: Upload generic
-      continue-on-error: true
-      uses: actions/upload-artifact@v4.6.1
-      with:
-        name: ${{ matrix.os }}_${{ env.PLUGIN_NAME }}-generic
-        path: out/${{ env.PLUGIN_NAME }}-generic.zip
+      - name: Upload generic
+        continue-on-error: true
+        uses: actions/upload-artifact@v4.6.1
+        with:
+          name: ${{ matrix.os }}_${{ env.PLUGIN_NAME }}-generic
+          path: out/${{ env.PLUGIN_NAME }}-generic.zip
 
   release:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     needs: publish
     runs-on: ubuntu-latest
     permissions:
-        id-token: write
-        attestations: write
-        packages: write
-        contents: write
+      id-token: write
+      attestations: write
+      packages: write
+      contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
 
-    - name: Download generic artifact from ubuntu-latest
-      uses: actions/download-artifact@v4.1.9
-      with:
-        name: ubuntu-latest_${{ env.PLUGIN_NAME }}-generic
-        path: out
+      - name: Download generic artifact from ubuntu-latest
+        uses: actions/download-artifact@v4.1.9
+        with:
+          name: ubuntu-latest_${{ env.PLUGIN_NAME }}-generic
+          path: out
 
-    - name: Unzip and copy generic artifact
-      run: |
-        mkdir -p attest_provenance
-        unzip out/${{ env.PLUGIN_NAME }}-generic.zip -d attest_provenance
-        cp --archive out/${{ env.PLUGIN_NAME }}-generic.zip attest_provenance
+      - name: Unzip and copy generic artifact
+        run: |
+          mkdir -p attest_provenance
+          unzip out/${{ env.PLUGIN_NAME }}-generic.zip -d attest_provenance
+          cp --archive out/${{ env.PLUGIN_NAME }}-generic.zip attest_provenance
 
-    - name: Clean up dll files
-      run: |
-        pushd attest_provenance/${{ env.PLUGIN_NAME }}
-        rm -rf NLog.dll SteamKit2.dll System.IO.Hashing.dll protobuf-net.Core.dll protobuf-net.dll
-        popd
+      - name: Clean up dll files
+        run: |
+          pushd attest_provenance/${{ env.PLUGIN_NAME }}
+          rm -rf NLog.dll SteamKit2.dll System.IO.Hashing.dll protobuf-net.Core.dll protobuf-net.dll
+          popd
 
-    - uses: actions/attest-build-provenance@v2
-      with:
-        subject-path: 'attest_provenance/*'
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "attest_provenance/*"
 
-    - name: Create GitHub release
-      id: github_release
-      uses: softprops/action-gh-release@v2.2.1
-      with:
-        tag_name: ${{ github.ref }}
-        name: ${{ env.PLUGIN_NAME }} ${{ github.ref }}
-        body_path: .github/RELEASE_TEMPLATE.md
-        prerelease: true
-        files: |
-          out/${{ env.PLUGIN_NAME }}-generic.zip
-          attest_provenance/${{ env.PLUGIN_NAME }}/ASFFreeGames.dll
+      - name: Create GitHub release
+        id: github_release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ env.PLUGIN_NAME }} ${{ github.ref }}
+          body_path: .github/RELEASE_TEMPLATE.md
+          prerelease: true
+          files: |
+            out/${{ env.PLUGIN_NAME }}-generic.zip
+            attest_provenance/${{ env.PLUGIN_NAME }}/ASFFreeGames.dll
