@@ -67,13 +67,25 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 
 			foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in allTasks) {
-				if (task.IsFaulted) { _ = task.Exception; }
+				if (task.IsFaulted) {
+					_ = task.Exception;
+				}
 			}
 		}
 
-		cancellationToken.ThrowIfCancellationRequested();
+		List<Exception> exceptions = new(allTasks.Length);
+		exceptions.AddRange(from task in allTasks where task.IsCanceled || task.IsFaulted select IListFreeGamesStrategy.ExceptionFromTask(task));
 
-		return [];
+		switch (exceptions.Count) {
+			case 1:
+				throw exceptions[0];
+			case > 0:
+				throw new AggregateException(exceptions);
+			default:
+				cts.Token.ThrowIfCancellationRequested();
+
+				throw new InvalidOperationException("This should never happen");
+		}
 	}
 
 	/// <summary>

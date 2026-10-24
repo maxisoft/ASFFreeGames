@@ -107,6 +107,12 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 				catch (Exception) {
 					// ignored
 				}
+
+				foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in strategiesTasks) {
+					if (task.IsFaulted) {
+						_ = task.Exception;
+					}
+				}
 			}
 
 			List<Exception> exceptions = new(strategiesTasks.Length);
