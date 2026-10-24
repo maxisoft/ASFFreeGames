@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -28,7 +28,15 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 
 		CachedRedlibInstanceList instanceList = new(context.Options, InstanceListCache);
 
-		List<Uri> instances = await instanceList.ListInstances(context.HttpClientFactory.CreateForGithub(), cancellationToken).ConfigureAwait(false);
+		List<Uri> instances;
+
+		try {
+			instances = await instanceList.ListInstances(context.HttpClientFactory.CreateForGithub(), cancellationToken).ConfigureAwait(false);
+		}
+		catch (Exception e) when (e is not OperationCanceledException) {
+			return [];
+		}
+
 		instances = Shuffle(instances);
 		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		cts.CancelAfter(60_000);
@@ -52,30 +60,20 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			await cts.CancelAsync().ConfigureAwait(false);
 
 			try {
-				await Task.WhenAll(tasks).ConfigureAwait(false);
+				await Task.WhenAll(allTasks).ConfigureAwait(false);
 			}
 			catch (Exception) {
 				// ignored
 			}
 
 			foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in allTasks) {
-				task.Dispose();
+				if (task.IsFaulted) { _ = task.Exception; }
 			}
 		}
 
-		List<Exception> exceptions = new(allTasks.Length);
-		exceptions.AddRange(from task in allTasks where task.IsCanceled || task.IsFaulted select IListFreeGamesStrategy.ExceptionFromTask(task));
+		cancellationToken.ThrowIfCancellationRequested();
 
-		switch (exceptions.Count) {
-			case 1:
-				throw exceptions[0];
-			case > 0:
-				throw new AggregateException(exceptions);
-			default:
-				cts.Token.ThrowIfCancellationRequested();
-
-				throw new InvalidOperationException("This should never happen");
-		}
+		return [];
 	}
 
 	/// <summary>
@@ -211,9 +209,9 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 				}
 
 				if (task.IsCompleted) {
+					if (task.IsFaulted) { _ = task.Exception; }
 					tasks.Remove(node);
 					node = tasks.First;
-					task.Dispose();
 
 					continue;
 				}

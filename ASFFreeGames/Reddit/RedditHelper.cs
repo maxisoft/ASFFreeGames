@@ -135,62 +135,87 @@ internal static class RedditHelper {
 			{ "x-sec-fetch-site", "none" }
 		};
 
+		Exception? lastException = null;
+
 		for (int t = 0; t < retry; t++) {
-			try {
+			bool rateLimited = false;
+
+			foreach (Uri url in ListingUrls) {
+				try {
 #pragma warning disable CA2000
-				response = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
+					response = await httpClient.GetStreamAsync(url, headers, cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA2000
 
-				if (await HandleTooManyRequest(response, cancellationToken: cancellationToken).ConfigureAwait(false)) {
-					continue;
-				}
+					if (await HandleTooManyRequest(response, cancellationToken: cancellationToken).ConfigureAwait(false)) {
+						rateLimited = true;
+						lastException = new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
 
-				if (!response.StatusCode.IsSuccessCode()) {
-					throw new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
-				}
-
-				JsonNode? res = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
-
-				if (res is null) {
-					throw new RedditServerException("empty response", response.StatusCode);
-				}
-
-				try {
-					if ((res["kind"]?.GetValue<string>() != "Listing") ||
-						res["data"] is null) {
-						throw new RedditServerException("invalid response", response.StatusCode);
+						break;
 					}
-				}
-				catch (Exception e) when (e is FormatException or InvalidOperationException) {
-					throw new RedditServerException("invalid response", response.StatusCode);
-				}
 
-				return res;
-			}
-			catch (Exception e) when (e is JsonException or IOException or RedditServerException or HttpRequestException) {
-				// If it's the last retry, re-throw the original Exception
-				if (t + 1 == retry) {
-					throw;
+					if (!response.StatusCode.IsSuccessCode()) {
+						lastException = new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
+
+						continue;
+					}
+
+					JsonNode? res = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
+
+					if (res is null) {
+						lastException = new RedditServerException("empty response", response.StatusCode);
+
+						continue;
+					}
+
+					try {
+						if ((res["kind"]?.GetValue<string>() != "Listing") ||
+							res["data"] is null) {
+							lastException = new RedditServerException("invalid response", response.StatusCode);
+
+							continue;
+						}
+					}
+					catch (Exception e) when (e is FormatException or InvalidOperationException) {
+						lastException = new RedditServerException("invalid response", response.StatusCode);
+
+						continue;
+					}
+
+					return res;
+				}
+				catch (Exception e) when (e is JsonException or IOException or RedditServerException or HttpRequestException) {
+					lastException = e;
+				}
+				finally {
+					if (response is not null) {
+						await response.DisposeAsync().ConfigureAwait(false);
+					}
+
+					response = null;
 				}
 
 				cancellationToken.ThrowIfCancellationRequested();
 			}
-			finally {
-				if (response is not null) {
-					await response.DisposeAsync().ConfigureAwait(false);
-				}
 
-				response = null;
+			if ((t + 1 == retry) && !rateLimited) {
+				break;
 			}
 
 			await Task.Delay((2 << (t + 1)) * 100, cancellationToken).ConfigureAwait(false);
 			cancellationToken.ThrowIfCancellationRequested();
 		}
 
+		if (lastException is not null) {
+			throw lastException;
+		}
+
 		return JsonNode.Parse("{}")!;
 	}
 
-	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
+	private static readonly Uri[] ListingUrls = [
+		new($"https://old.reddit.com/user/{User}.json?sort=new", UriKind.Absolute),
+		new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute)
+	];
 
 	/// <summary>
 	///     Handles too many requests by checking the status code and headers of the response.
