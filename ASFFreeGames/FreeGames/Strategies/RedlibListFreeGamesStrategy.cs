@@ -28,15 +28,7 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 
 		CachedRedlibInstanceList instanceList = new(context.Options, InstanceListCache);
 
-		List<Uri> instances;
-
-		try {
-			instances = await instanceList.ListInstances(context.HttpClientFactory.CreateForGithub(), cancellationToken).ConfigureAwait(false);
-		}
-		catch (Exception e) when (e is not OperationCanceledException) {
-			return [];
-		}
-
+		List<Uri> instances = await instanceList.ListInstances(context.HttpClientFactory.CreateForGithub(), cancellationToken).ConfigureAwait(false);
 		instances = Shuffle(instances);
 		using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		cts.CancelAfter(60_000);
@@ -73,19 +65,9 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 		}
 
-		List<Exception> exceptions = new(allTasks.Length);
-		exceptions.AddRange(from task in allTasks where task.IsCanceled || task.IsFaulted select IListFreeGamesStrategy.ExceptionFromTask(task));
+		cancellationToken.ThrowIfCancellationRequested();
 
-		switch (exceptions.Count) {
-			case 1:
-				throw exceptions[0];
-			case > 0:
-				throw new AggregateException(exceptions);
-			default:
-				cts.Token.ThrowIfCancellationRequested();
-
-				throw new InvalidOperationException("This should never happen");
-		}
+		return [];
 	}
 
 	/// <summary>
@@ -153,7 +135,11 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 		}
 		finally {
-			DownloadSemaphore.Release();
+			try {
+				DownloadSemaphore.Release();
+			} catch (ObjectDisposedException) {
+				// ignored
+			}
 		}
 
 		IReadOnlyCollection<RedlibGameEntry> entries = RedlibHtmlParser.ParseGamesFromHtml(content);
