@@ -65,9 +65,19 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 		}
 
-		cancellationToken.ThrowIfCancellationRequested();
+		List<Exception> exceptions = new(allTasks.Length);
+		exceptions.AddRange(from task in allTasks where task.IsCanceled || task.IsFaulted select IListFreeGamesStrategy.ExceptionFromTask(task));
 
-		return [];
+		switch (exceptions.Count) {
+			case 1:
+				throw exceptions[0];
+			case > 0:
+				throw new AggregateException(exceptions);
+			default:
+				cancellationToken.ThrowIfCancellationRequested();
+
+				return [];
+		}
 	}
 
 	/// <summary>
