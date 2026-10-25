@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -52,14 +52,16 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			await cts.CancelAsync().ConfigureAwait(false);
 
 			try {
-				await Task.WhenAll(tasks).ConfigureAwait(false);
+				await Task.WhenAll(allTasks).ConfigureAwait(false);
 			}
 			catch (Exception) {
 				// ignored
 			}
 
 			foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in allTasks) {
-				task.Dispose();
+				if (task.IsFaulted) {
+					_ = task.Exception;
+				}
 			}
 		}
 
@@ -72,9 +74,9 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			case > 0:
 				throw new AggregateException(exceptions);
 			default:
-				cts.Token.ThrowIfCancellationRequested();
+				cancellationToken.ThrowIfCancellationRequested();
 
-				throw new InvalidOperationException("This should never happen");
+				return [];
 		}
 	}
 
@@ -143,7 +145,11 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 			}
 		}
 		finally {
-			DownloadSemaphore.Release();
+			try {
+				DownloadSemaphore.Release();
+			} catch (ObjectDisposedException) {
+				// ignored
+			}
 		}
 
 		IReadOnlyCollection<RedlibGameEntry> entries = RedlibHtmlParser.ParseGamesFromHtml(content);
@@ -211,9 +217,9 @@ public sealed class RedlibListFreeGamesStrategy : IListFreeGamesStrategy {
 				}
 
 				if (task.IsCompleted) {
+					if (task.IsFaulted) { _ = task.Exception; }
 					tasks.Remove(node);
 					node = tasks.First;
-					task.Dispose();
 
 					continue;
 				}

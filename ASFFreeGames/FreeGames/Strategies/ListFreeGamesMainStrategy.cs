@@ -56,6 +56,10 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 				// ignored and handled below
 			}
 
+			if (redditTask1.IsFaulted) {
+				_ = redditTask1.Exception;
+			}
+
 			if (redditTask1.IsCompletedSuccessfully) {
 				IReadOnlyCollection<RedditGameEntry> result = await redditTask1.ConfigureAwait(false);
 
@@ -106,6 +110,12 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 				}
 				catch (Exception) {
 					// ignored
+				}
+
+				foreach (Task<IReadOnlyCollection<RedditGameEntry>> task in strategiesTasks) {
+					if (task.IsFaulted) {
+						_ = task.Exception;
+					}
 				}
 			}
 
@@ -208,6 +218,9 @@ public class ListFreeGamesMainStrategy : IListFreeGamesStrategy {
 				}
 
 				if (taskNode.Value.IsCompleted) {
+					if (taskNode.Value.IsFaulted) {
+						_ = taskNode.Value.Exception;
+					}
 					tasks.Remove(taskNode.Value);
 					taskNode = tasks.First;
 

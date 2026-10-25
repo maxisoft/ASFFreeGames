@@ -57,7 +57,12 @@ public class RedlibInstanceList(ASFFreeGamesOptions options) : IRedlibInstanceLi
 			return await ListFromEmbedded(cancellationToken).ConfigureAwait(false);
 		}
 
-		CheckUpToDate(node);
+		try {
+			CheckUpToDate(node);
+		}
+		catch (RedlibOutDatedListException) {
+			// Keep using the remote list when possible; embedded instances are the fallback below.
+		}
 
 		List<Uri> res = ParseUrls(node);
 
@@ -83,7 +88,12 @@ public class RedlibInstanceList(ASFFreeGamesOptions options) : IRedlibInstanceLi
 #pragma warning restore CA2201
 		}
 
-		CheckUpToDate(node);
+		try {
+			CheckUpToDate(node);
+		}
+		catch (RedlibOutDatedListException) {
+			// Prefer a stale embedded list over failing the whole collect cycle.
+		}
 
 		return ParseUrls(node);
 	}
