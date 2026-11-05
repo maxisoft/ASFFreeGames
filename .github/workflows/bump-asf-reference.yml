@@ -5,7 +5,7 @@ name: Plugin-bump-asf-reference
 
 on:
   schedule:
-  - cron: '17 1 * * *'
+    - cron: "17 1 * * *"
 
   workflow_dispatch:
 
@@ -19,52 +19,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
-      with:
-        token: ${{ env.PUSH_GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ env.PUSH_GITHUB_TOKEN }}
 
-    - name: Fetch latest ArchiSteamFarm release
-      id: asf-release
-      uses: pozetroninc/github-action-get-latest-release@v0.8.0
-      with:
-        owner: JustArchiNET
-        repo: ArchiSteamFarm
-        excludes: draft,prerelease
+      - name: Fetch latest ArchiSteamFarm release
+        id: asf-release
+        uses: pozetroninc/github-action-get-latest-release@v0.8.0
+        with:
+          owner: JustArchiNET
+          repo: ArchiSteamFarm
+          excludes: draft,prerelease
 
-    - name: Import GPG key for signing
-      uses: crazy-max/ghaction-import-gpg@v6.2.0
-      if: ${{ env.GPG_PRIVATE_KEY != null }}
-      with:
-        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
-        git_user_signingkey: true
-        git_commit_gpgsign: true
+      - name: Import GPG key for signing
+        uses: crazy-max/ghaction-import-gpg@v6.2.0
+        if: ${{ env.GPG_PRIVATE_KEY != null }}
+        with:
+          gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
 
-    - name: Update ASF reference if needed
-      env:
-        LATEST_ASF_RELEASE: ${{ steps.asf-release.outputs.release }}
-      shell: sh
-      run: |
-        set -eu
+      - name: Update ASF reference if needed
+        env:
+          LATEST_ASF_RELEASE: ${{ steps.asf-release.outputs.release }}
+        shell: sh
+        run: |
+          set -eu
 
-        git config -f .gitmodules submodule.ArchiSteamFarm.branch "$LATEST_ASF_RELEASE"
+          git config -f .gitmodules submodule.ArchiSteamFarm.branch "$LATEST_ASF_RELEASE"
 
-        git add -A ".gitmodules"
+          git add -A ".gitmodules"
 
-        if ! git diff --cached --quiet; then
-            if ! git config --get user.email > /dev/null; then
-                git config --local user.email "${{ github.repository_owner }}@users.noreply.github.com"
-            fi
+          if ! git diff --cached --quiet; then
+              if ! git config --get user.email > /dev/null; then
+                  git config --local user.email "${{ github.repository_owner }}@users.noreply.github.com"
+              fi
 
-            if ! git config --get user.name > /dev/null; then
-                git config --local user.name "${{ github.repository_owner }}"
-            fi
+              if ! git config --get user.name > /dev/null; then
+                  git config --local user.name "${{ github.repository_owner }}"
+              fi
 
-            git commit -m "Automatic ArchiSteamFarm reference update to ${LATEST_ASF_RELEASE}"
-        fi
+              git commit -m "Automatic ArchiSteamFarm reference update to ${LATEST_ASF_RELEASE}"
+          fi
 
-    - name: Push changes to the repo
-      uses: ad-m/github-push-action@v0.8.0
-      with:
-        github_token: ${{ env.PUSH_GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+      - name: Push changes to the repo
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ env.PUSH_GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

@@ -16,15 +16,18 @@ namespace Maxisoft.Utils.Collections.Spans {
 	[DebuggerDisplay("Count = {Count}, Capacity = {Capacity}")]
 	[DebuggerTypeProxy(typeof(SpanDict<,>.DebuggerTypeProxyImpl))]
 	[SuppressMessage("Design", "CA1051")]
-	public ref partial struct SpanDict<TKey, TValue> where TKey : notnull {
+	public ref partial struct SpanDict<TKey, TValue>
+		where TKey : notnull {
 		public readonly Span<KeyValuePair<TKey, TValue>> Buckets;
 		internal BitSpan Mask;
 		public readonly IEqualityComparer<TKey> Comparer;
 
-		public SpanDict(int capacity, IEqualityComparer<TKey>? comparer = null) : this(new KeyValuePair<TKey, TValue>[capacity], comparer) { }
+		public SpanDict(int capacity, IEqualityComparer<TKey>? comparer = null)
+			: this(new KeyValuePair<TKey, TValue>[capacity], comparer) { }
 
 		public SpanDict(
-			Span<KeyValuePair<TKey, TValue>> buckets, BitSpan mask,
+			Span<KeyValuePair<TKey, TValue>> buckets,
+			BitSpan mask,
 			IEqualityComparer<TKey>? comparer = null
 		) {
 			if (mask.Count < buckets.Length) {
@@ -42,7 +45,11 @@ namespace Maxisoft.Utils.Collections.Spans {
 		/// <param name="buckets"></param>
 		/// <param name="comparer"></param>
 		/// <remarks>This constructor <b>Allocate</b> an array in order to store the <see cref="Mask" /></remarks>
-		public SpanDict(Span<KeyValuePair<TKey, TValue>> buckets, IEqualityComparer<TKey>? comparer = null) : this(buckets, BitSpan.Zeros(buckets.Length), comparer) { }
+		public SpanDict(
+			Span<KeyValuePair<TKey, TValue>> buckets,
+			IEqualityComparer<TKey>? comparer = null
+		)
+			: this(buckets, BitSpan.Zeros(buckets.Length), comparer) { }
 
 		public readonly Enumerator GetEnumerator() {
 			return new Enumerator(this);
@@ -64,11 +71,19 @@ namespace Maxisoft.Utils.Collections.Spans {
 
 		public readonly void CopyTo([NotNull] KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
 			if ((arrayIndex < 0) || (arrayIndex > array.Length)) {
-				throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+				throw new ArgumentOutOfRangeException(
+					nameof(arrayIndex),
+					arrayIndex,
+					"Out of bounds"
+				);
 			}
 
 			if (array.Length - arrayIndex < Count) {
-				throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+				throw new ArgumentOutOfRangeException(
+					nameof(arrayIndex),
+					arrayIndex,
+					"Out of bounds"
+				);
 			}
 
 			Span<KeyValuePair<TKey, TValue>> span = array;
@@ -204,7 +219,9 @@ namespace Maxisoft.Utils.Collections.Spans {
 					Mask.Set(index, true);
 					Mask.Set(forward, false);
 
-					if (RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>()) {
+					if (
+						RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>()
+					) {
 						Buckets[forward] = default;
 					}
 
@@ -214,7 +231,10 @@ namespace Maxisoft.Utils.Collections.Spans {
 				forward = (forward + 1) % Capacity;
 			} while (c++ < limit);
 
-			if (RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>() && !Mask[originalIndex]) {
+			if (
+				RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>()
+				&& !Mask[originalIndex]
+			) {
 				Buckets[originalIndex] = default;
 			}
 
@@ -263,9 +283,13 @@ namespace Maxisoft.Utils.Collections.Spans {
 
 		[SuppressMessage("Design", "CA1000")]
 		public static SpanDict<TKey, TValue> CreateFromBuffers<TBucket, TMask>(
-			Span<TBucket> buckets, Span<TMask> mask,
-			IEqualityComparer<TKey>? comparer = null, int count = -1
-		) where TBucket : struct where TMask : struct {
+			Span<TBucket> buckets,
+			Span<TMask> mask,
+			IEqualityComparer<TKey>? comparer = null,
+			int count = -1
+		)
+			where TBucket : struct
+			where TMask : struct {
 			var cBucket = MemoryMarshal.Cast<TBucket, KeyValuePair<TKey, TValue>>(buckets);
 			var cMask = MemoryMarshal.Cast<TMask, long>(mask);
 			var res = new SpanDict<TKey, TValue>(cBucket, cMask, comparer);
@@ -298,8 +322,10 @@ namespace Maxisoft.Utils.Collections.Spans {
 		[SuppressMessage("Design", "CA1000")]
 		public static SpanDict<TKey, TValue> CreateFromBuffer<TSpan>(
 			Span<TSpan> buff,
-			IEqualityComparer<TKey>? comparer = null, int count = -1
-		) where TSpan : unmanaged {
+			IEqualityComparer<TKey>? comparer = null,
+			int count = -1
+		)
+			where TSpan : unmanaged {
 			unsafe {
 				while ((buff.Length > 0) && ((buff.Length * sizeof(TSpan)) % sizeof(long) != 0)) {
 					buff = buff.Slice(0, buff.Length - 1);
@@ -310,7 +336,12 @@ namespace Maxisoft.Utils.Collections.Spans {
 			var reserved = BitSpan.ComputeLongArraySize(kvSpan.Length);
 			var longSpan = MemoryMarshal.Cast<TSpan, long>(buff);
 
-			return CreateFromBuffers(longSpan.Slice(reserved), longSpan.Slice(0, reserved), comparer, count);
+			return CreateFromBuffers(
+				longSpan.Slice(reserved),
+				longSpan.Slice(0, reserved),
+				comparer,
+				count
+			);
 		}
 	}
 }

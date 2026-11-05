@@ -22,8 +22,13 @@ internal static class RedditHelper {
 	///     Gets a collection of Reddit game entries from a JSON object.
 	/// </summary>
 	/// <returns>A collection of Reddit game entries.</returns>
-	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(SimpleHttpClient httpClient, uint retry = 5, CancellationToken cancellationToken = default) {
-		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken, retry).ConfigureAwait(false);
+	public static async ValueTask<IReadOnlyCollection<RedditGameEntry>> GetGames(
+		SimpleHttpClient httpClient,
+		uint retry = 5,
+		CancellationToken cancellationToken = default
+	) {
+		JsonNode? jsonPayload = await GetPayload(httpClient, cancellationToken, retry)
+			.ConfigureAwait(false);
 
 		JsonNode? childrenElement = jsonPayload["data"]?["children"];
 
@@ -31,7 +36,10 @@ internal static class RedditHelper {
 	}
 
 	internal static IReadOnlyCollection<RedditGameEntry> LoadMessages(JsonNode children) {
-		Maxisoft.Utils.Collections.Dictionaries.OrderedDictionary<RedditGameEntry, EmptyStruct> games = new(new GameEntryIdentifierEqualityComparer());
+		Maxisoft.Utils.Collections.Dictionaries.OrderedDictionary<
+			RedditGameEntry,
+			EmptyStruct
+		> games = new(new GameEntryIdentifierEqualityComparer());
 
 		IReadOnlyCollection<RedditGameEntry> returnValue() {
 			while (games.Count is > 0 and > MaxGameEntry) {
@@ -120,10 +128,15 @@ internal static class RedditHelper {
 	/// <returns>A JSON object response or null if failed.</returns>
 	/// <exception cref="RedditServerException">Thrown when Reddit returns a server error.</exception>
 	/// <remarks>This method is based on this GitHub issue: https://github.com/maxisoft/ASFFreeGames/issues/28</remarks>
-	private static async ValueTask<JsonNode> GetPayload(SimpleHttpClient httpClient, CancellationToken cancellationToken, uint retry = 5) {
+	private static async ValueTask<JsonNode> GetPayload(
+		SimpleHttpClient httpClient,
+		CancellationToken cancellationToken,
+		uint retry = 5
+	) {
 		HttpStreamResponse? response = null;
 
-		Dictionary<string, string> headers = new() {
+		Dictionary<string, string> headers = new()
+		{
 			{ "Pragma", "no-cache" },
 			{ "Cache-Control", "no-cache" },
 			{ "Accept", "application/json" },
@@ -132,32 +145,40 @@ internal static class RedditHelper {
 			{ "Sec-Fetch-Dest", "empty" },
 			{ "x-sec-fetch-dest", "empty" },
 			{ "x-sec-fetch-mode", "no-cors" },
-			{ "x-sec-fetch-site", "none" }
+			{ "x-sec-fetch-site", "none" },
 		};
 
 		for (int t = 0; t < retry; t++) {
 			try {
 #pragma warning disable CA2000
-				response = await httpClient.GetStreamAsync(GetUrl(), headers, cancellationToken).ConfigureAwait(false);
+				response = await httpClient
+					.GetStreamAsync(GetUrl(), headers, cancellationToken)
+					.ConfigureAwait(false);
 #pragma warning restore CA2000
 
-				if (await HandleTooManyRequest(response, cancellationToken: cancellationToken).ConfigureAwait(false)) {
+				if (
+					await HandleTooManyRequest(response, cancellationToken: cancellationToken)
+						.ConfigureAwait(false)
+				) {
 					continue;
 				}
 
 				if (!response.StatusCode.IsSuccessCode()) {
-					throw new RedditServerException($"reddit http error code is {response.StatusCode}", response.StatusCode);
+					throw new RedditServerException(
+						$"reddit http error code is {response.StatusCode}",
+						response.StatusCode
+					);
 				}
 
-				JsonNode? res = await ParseJsonNode(response, cancellationToken).ConfigureAwait(false);
+				JsonNode? res = await ParseJsonNode(response, cancellationToken)
+					.ConfigureAwait(false);
 
 				if (res is null) {
 					throw new RedditServerException("empty response", response.StatusCode);
 				}
 
 				try {
-					if ((res["kind"]?.GetValue<string>() != "Listing") ||
-						res["data"] is null) {
+					if ((res["kind"]?.GetValue<string>() != "Listing") || res["data"] is null) {
 						throw new RedditServerException("invalid response", response.StatusCode);
 					}
 				}
@@ -167,7 +188,13 @@ internal static class RedditHelper {
 
 				return res;
 			}
-			catch (Exception e) when (e is JsonException or IOException or RedditServerException or HttpRequestException) {
+			catch (Exception e)
+				when (e
+						is JsonException
+							or IOException
+							or RedditServerException
+							or HttpRequestException
+				) {
 				// If it's the last retry, re-throw the original Exception
 				if (t + 1 == retry) {
 					throw;
@@ -190,7 +217,8 @@ internal static class RedditHelper {
 		return JsonNode.Parse("{}")!;
 	}
 
-	private static Uri GetUrl() => new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
+	private static Uri GetUrl() =>
+		new($"https://www.reddit.com/user/{User}.json?sort=new", UriKind.Absolute);
 
 	/// <summary>
 	///     Handles too many requests by checking the status code and headers of the response.
@@ -202,14 +230,35 @@ internal static class RedditHelper {
 	/// <param name="maxTimeToWait"></param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>True if the request was handled & awaited, false otherwise.</returns>
-	private static async ValueTask<bool> HandleTooManyRequest(HttpStreamResponse response, int maxTimeToWait = 45, CancellationToken cancellationToken = default) {
+	private static async ValueTask<bool> HandleTooManyRequest(
+		HttpStreamResponse response,
+		int maxTimeToWait = 45,
+		CancellationToken cancellationToken = default
+	) {
 		if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests) {
-			if (response.Response.Headers.TryGetValues("x-ratelimit-remaining", out IEnumerable<string>? rateLimitRemaining)) {
-				if (int.TryParse(rateLimitRemaining.FirstOrDefault(), out int remaining) && (remaining <= 0)) {
-					if (response.Response.Headers.TryGetValues("x-ratelimit-reset", out IEnumerable<string>? rateLimitReset)
-						&& float.TryParse(rateLimitReset.FirstOrDefault(), out float reset) && double.IsNormal(reset) && (0 < reset) && (reset < maxTimeToWait)) {
+			if (
+				response.Response.Headers.TryGetValues(
+					"x-ratelimit-remaining",
+					out IEnumerable<string>? rateLimitRemaining
+				)
+			) {
+				if (
+					int.TryParse(rateLimitRemaining.FirstOrDefault(), out int remaining)
+					&& (remaining <= 0)
+				) {
+					if (
+						response.Response.Headers.TryGetValues(
+							"x-ratelimit-reset",
+							out IEnumerable<string>? rateLimitReset
+						)
+						&& float.TryParse(rateLimitReset.FirstOrDefault(), out float reset)
+						&& double.IsNormal(reset)
+						&& (0 < reset)
+						&& (reset < maxTimeToWait)
+					) {
 						try {
-							await Task.Delay(TimeSpan.FromSeconds(reset), cancellationToken).ConfigureAwait(false);
+							await Task.Delay(TimeSpan.FromSeconds(reset), cancellationToken)
+								.ConfigureAwait(false);
 						}
 						catch (TaskCanceledException) {
 							return false;
@@ -236,7 +285,10 @@ internal static class RedditHelper {
 	/// <param name="stream">The stream response containing the JSON data.</param>
 	/// <param name="cancellationToken">The cancellation token.</param>
 	/// <returns>The parsed JSON object, or null if parsing fails.</returns>
-	internal static async Task<JsonNode?> ParseJsonNode(HttpStreamResponse stream, CancellationToken cancellationToken) {
+	internal static async Task<JsonNode?> ParseJsonNode(
+		HttpStreamResponse stream,
+		CancellationToken cancellationToken
+	) {
 		string data = await stream.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
 		return JsonNode.Parse(data);

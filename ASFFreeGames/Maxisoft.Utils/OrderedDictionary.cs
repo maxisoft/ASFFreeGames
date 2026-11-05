@@ -22,11 +22,14 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 	///     :<c>TValue</c>.
 	/// </typeparam>
 	/// <seealso cref="OrderedDictionary{TKey,TValue}" />
-	public abstract class OrderedDictionary<TKey, TValue, TList, TDictionary> : IOrderedDictionary<TKey, TValue>
-		where TList : class, IList<TKey>, new() where TDictionary : class, IDictionary<TKey, TValue>, new() {
+	public abstract class OrderedDictionary<TKey, TValue, TList, TDictionary>
+		: IOrderedDictionary<TKey, TValue>
+		where TList : class, IList<TKey>, new()
+		where TDictionary : class, IDictionary<TKey, TValue>, new() {
 		protected OrderedDictionary() { }
 
-		protected internal OrderedDictionary(in TDictionary initial) : this(in initial, []) { }
+		protected internal OrderedDictionary(in TDictionary initial)
+			: this(in initial, []) { }
 
 		protected internal OrderedDictionary(in TDictionary initial, in TList list) {
 			Dictionary = initial;
@@ -68,17 +71,26 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 			Dictionary.Clear();
 		}
 
-		public bool Contains(KeyValuePair<TKey, TValue> item) => Contains(in item, EqualityComparer<TValue>.Default);
+		public bool Contains(KeyValuePair<TKey, TValue> item) =>
+			Contains(in item, EqualityComparer<TValue>.Default);
 
 		public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
 #pragma warning disable CA1062
 			if ((arrayIndex < 0) || (arrayIndex > array.Length)) {
 #pragma warning restore CA1062
-				throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+				throw new ArgumentOutOfRangeException(
+					nameof(arrayIndex),
+					arrayIndex,
+					"Out of bounds"
+				);
 			}
 
 			if (array.Length - arrayIndex < Indexes.Count) {
-				throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+				throw new ArgumentOutOfRangeException(
+					nameof(arrayIndex),
+					arrayIndex,
+					"Out of bounds"
+				);
 			}
 
 			int c = 0;
@@ -125,7 +137,8 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 		}
 
 #pragma warning disable CS8601 // Possible null reference assignment.
-		public bool TryGetValue(TKey key, out TValue value) => Dictionary.TryGetValue(key, out value);
+		public bool TryGetValue(TKey key, out TValue value) =>
+			Dictionary.TryGetValue(key, out value);
 #pragma warning restore CS8601 // Possible null reference assignment.
 
 		public TValue this[TKey key] {
@@ -133,9 +146,11 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 			set => DoAdd(key, value, true);
 		}
 
-		public ICollection<TKey> Keys => new KeyCollection<OrderedDictionary<TKey, TValue, TList, TDictionary>>(this);
+		public ICollection<TKey> Keys =>
+			new KeyCollection<OrderedDictionary<TKey, TValue, TList, TDictionary>>(this);
 
-		public ICollection<TValue> Values => new ValuesCollection<OrderedDictionary<TKey, TValue, TList, TDictionary>>(this);
+		public ICollection<TValue> Values =>
+			new ValuesCollection<OrderedDictionary<TKey, TValue, TList, TDictionary>>(this);
 
 		public TValue this[int index] {
 			get => At(index).Value;
@@ -174,9 +189,13 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 
 		public int IndexOf(in TValue value) => IndexOf(in value, EqualityComparer<TValue>.Default);
 
-		public bool Contains<TEqualityComparer>(in KeyValuePair<TKey, TValue> item, TEqualityComparer comparer)
+		public bool Contains<TEqualityComparer>(
+			in KeyValuePair<TKey, TValue> item,
+			TEqualityComparer comparer
+		)
 			where TEqualityComparer : IEqualityComparer<TValue> =>
-			Dictionary.TryGetValue(item.Key, out TValue? value) && comparer.Equals(value, item.Value);
+			Dictionary.TryGetValue(item.Key, out TValue? value)
+			&& comparer.Equals(value, item.Value);
 
 		public int IndexOf<TEqualityComparer>(in TValue value, TEqualityComparer comparer)
 			where TEqualityComparer : IEqualityComparer<TValue> {
@@ -264,7 +283,10 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 		public void Swap(int firstIndex, int secondIndex) {
 			CheckForOutOfBounds(firstIndex);
 			CheckForOutOfBounds(secondIndex);
-			(Indexes[secondIndex], Indexes[firstIndex]) = (Indexes[firstIndex], Indexes[secondIndex]);
+			(Indexes[secondIndex], Indexes[firstIndex]) = (
+				Indexes[firstIndex],
+				Indexes[secondIndex]
+			);
 		}
 
 		/// <summary>
@@ -354,11 +376,19 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 #pragma warning disable CA1062
 				if ((arrayIndex < 0) || (arrayIndex > array.Length)) {
 #pragma warning restore CA1062
-					throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+					throw new ArgumentOutOfRangeException(
+						nameof(arrayIndex),
+						arrayIndex,
+						"Out of bounds"
+					);
 				}
 
 				if (array.Length - arrayIndex < Dictionary.Count) {
-					throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+					throw new ArgumentOutOfRangeException(
+						nameof(arrayIndex),
+						arrayIndex,
+						"Out of bounds"
+					);
 				}
 
 				Dictionary.Indexes.CopyTo(array, arrayIndex);
@@ -373,7 +403,7 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 
 		protected class ValuesCollection<TDict> : ICollection<TValue>
 			where TDict : OrderedDictionary<TKey, TValue, TList, TDictionary> {
-			protected private readonly TDict Dictionary;
+			private protected readonly TDict Dictionary;
 
 			protected internal ValuesCollection(TDict dictionary) => Dictionary = dictionary;
 
@@ -396,11 +426,19 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 #pragma warning disable CA1062
 				if ((arrayIndex < 0) || (arrayIndex > array.Length)) {
 #pragma warning restore CA1062
-					throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+					throw new ArgumentOutOfRangeException(
+						nameof(arrayIndex),
+						arrayIndex,
+						"Out of bounds"
+					);
 				}
 
 				if (array.Length - arrayIndex < Dictionary.Count) {
-					throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, "Out of bounds");
+					throw new ArgumentOutOfRangeException(
+						nameof(arrayIndex),
+						arrayIndex,
+						"Out of bounds"
+					);
 				}
 
 				int c = 0;
@@ -421,17 +459,18 @@ namespace Maxisoft.Utils.Collections.Dictionaries {
 		}
 	}
 
-	public class
-		OrderedDictionary<TKey, TValue> : OrderedDictionary<TKey, TValue, List<TKey>, Dictionary<TKey, TValue>> where TKey : notnull {
+	public class OrderedDictionary<TKey, TValue>
+		: OrderedDictionary<TKey, TValue, List<TKey>, Dictionary<TKey, TValue>>
+		where TKey : notnull {
 		public OrderedDictionary() { }
 
-		public OrderedDictionary(int capacity) : base(
-			new Dictionary<TKey, TValue>(capacity),
-			new List<TKey>(capacity)
-		) { }
+		public OrderedDictionary(int capacity)
+			: base(new Dictionary<TKey, TValue>(capacity), new List<TKey>(capacity)) { }
 
-		public OrderedDictionary(IEqualityComparer<TKey> comparer) : base(new Dictionary<TKey, TValue>(comparer)) { }
+		public OrderedDictionary(IEqualityComparer<TKey> comparer)
+			: base(new Dictionary<TKey, TValue>(comparer)) { }
 
-		public OrderedDictionary(int capacity, IEqualityComparer<TKey> comparer) : base(new Dictionary<TKey, TValue>(capacity, comparer), new List<TKey>(capacity)) { }
+		public OrderedDictionary(int capacity, IEqualityComparer<TKey> comparer)
+			: base(new Dictionary<TKey, TValue>(capacity, comparer), new List<TKey>(capacity)) { }
 	}
 }

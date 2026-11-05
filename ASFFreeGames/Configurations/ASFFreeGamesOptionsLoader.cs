@@ -21,18 +21,36 @@ public static class ASFFreeGamesOptionsLoader {
 		try {
 			IConfigurationRoot configurationRoot = CreateConfigurationRoot();
 
-			IEnumerable<string> blacklist = configurationRoot.GetValue("Blacklist", options.Blacklist) ?? options.Blacklist;
-			options.Blacklist = new HashSet<string>(blacklist, StringComparer.InvariantCultureIgnoreCase);
+			IEnumerable<string> blacklist =
+				configurationRoot.GetValue("Blacklist", options.Blacklist) ?? options.Blacklist;
+			options.Blacklist = new HashSet<string>(
+				blacklist,
+				StringComparer.InvariantCultureIgnoreCase
+			);
 
 			options.VerboseLog = configurationRoot.GetValue("VerboseLog", options.VerboseLog);
-			options.RecheckInterval = TimeSpan.FromMilliseconds(configurationRoot.GetValue("RecheckIntervalMs", options.RecheckInterval.TotalMilliseconds));
-			options.SkipFreeToPlay = configurationRoot.GetValue("SkipFreeToPlay", options.SkipFreeToPlay);
+			options.RecheckInterval = TimeSpan.FromMilliseconds(
+				configurationRoot.GetValue(
+					"RecheckIntervalMs",
+					options.RecheckInterval.TotalMilliseconds
+				)
+			);
+			options.SkipFreeToPlay = configurationRoot.GetValue(
+				"SkipFreeToPlay",
+				options.SkipFreeToPlay
+			);
 			options.SkipDLC = configurationRoot.GetValue("SkipDLC", options.SkipDLC);
-			options.RandomizeRecheckInterval = configurationRoot.GetValue("RandomizeRecheckInterval", options.RandomizeRecheckInterval);
+			options.RandomizeRecheckInterval = configurationRoot.GetValue(
+				"RandomizeRecheckInterval",
+				options.RandomizeRecheckInterval
+			);
 			options.Proxy = configurationRoot.GetValue("Proxy", options.Proxy);
 			options.RedditProxy = configurationRoot.GetValue("RedditProxy", options.RedditProxy);
 			options.RedlibProxy = configurationRoot.GetValue("RedlibProxy", options.RedlibProxy);
-			options.RedlibInstanceUrl = configurationRoot.GetValue("RedlibInstanceUrl", options.RedlibInstanceUrl);
+			options.RedlibInstanceUrl = configurationRoot.GetValue(
+				"RedlibInstanceUrl",
+				options.RedlibInstanceUrl
+			);
 		}
 		finally {
 			Semaphore.Release();
@@ -59,7 +77,12 @@ public static class ASFFreeGamesOptionsLoader {
 		try {
 #pragma warning disable CAC001
 #pragma warning disable CA2007
-			await using FileStream fs = new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+			await using FileStream fs = new(
+				path,
+				FileMode.OpenOrCreate,
+				FileAccess.ReadWrite,
+				FileShare.ReadWrite
+			);
 #pragma warning restore CA2007
 #pragma warning restore CAC001
 			byte[] buffer = new byte[fs.Length > 0 ? (int) fs.Length + 1 : 1 << 15];
@@ -69,14 +92,16 @@ public static class ASFFreeGamesOptionsLoader {
 			try {
 				fs.Position = 0;
 				fs.SetLength(0);
-				int written = await ASFFreeGamesOptionsSaver.SaveOptions(fs, options, true, cancellationToken).ConfigureAwait(false);
+				int written = await ASFFreeGamesOptionsSaver
+					.SaveOptions(fs, options, true, cancellationToken)
+					.ConfigureAwait(false);
 				fs.SetLength(written);
 			}
-
 			catch (Exception) {
 				fs.Position = 0;
 
-				await fs.WriteAsync(((ReadOnlyMemory<byte>) buffer)[..read], cancellationToken).ConfigureAwait(false);
+				await fs.WriteAsync(((ReadOnlyMemory<byte>) buffer)[..read], cancellationToken)
+					.ConfigureAwait(false);
 				fs.SetLength(read);
 
 				throw;

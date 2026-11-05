@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ASFFreeGames.ASFExtensions.Games;
 
 namespace Maxisoft.ASF.Redlib;
+
 #pragma warning disable CA1819
 
 public sealed class GameIdentifiersEqualityComparer : IEqualityComparer<RedlibGameEntry> {

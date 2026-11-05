@@ -33,16 +33,52 @@ public class ASFFreeGamesOptions {
 	[JsonPropertyName("verboseLog")]
 	public bool? VerboseLog { get; set; }
 
+	[JsonPropertyName("autoBlacklistForbiddenPackages")]
+	public bool? AutoBlacklistForbiddenPackages { get; set; } = true;
+
+	[JsonPropertyName("delayBetweenRequests")]
+	public int? DelayBetweenRequests { get; set; } = 500; // Default 500ms delay between requests
+
+	[JsonPropertyName("maxRetryAttempts")]
+	public int? MaxRetryAttempts { get; set; } = 1; // Default 1 retry attempt for transient errors
+
+	[JsonPropertyName("retryDelayMilliseconds")]
+	public int? RetryDelayMilliseconds { get; set; } = 2000; // Default 2 second delay between retries
 	#region IsBlacklisted
 	public bool IsBlacklisted(in GameIdentifier gid) {
 		if (Blacklist.Count <= 0) {
 			return false;
 		}
 
-		return Blacklist.Contains(gid.ToString()) || Blacklist.Contains(gid.Id.ToString(CultureInfo.InvariantCulture));
+		return Blacklist.Contains(gid.ToString())
+			|| Blacklist.Contains(gid.Id.ToString(CultureInfo.InvariantCulture));
 	}
 
-	public bool IsBlacklisted(in Bot? bot) => bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
+	public bool IsBlacklisted(in Bot? bot) =>
+		bot is null || ((Blacklist.Count > 0) && Blacklist.Contains($"bot/{bot.BotName}"));
+
+	public void AddToBlacklist(in GameIdentifier gid) {
+		if (Blacklist is not HashSet<string> blacklist) {
+			Blacklist = new HashSet<string>(Blacklist);
+			blacklist = (HashSet<string>) Blacklist;
+		}
+		((HashSet<string>) Blacklist).Add(gid.ToString());
+	}
+
+	public bool RemoveFromBlacklist(in GameIdentifier gid) {
+		if (Blacklist is not HashSet<string> blacklist) {
+			Blacklist = new HashSet<string>(Blacklist);
+			blacklist = (HashSet<string>) Blacklist;
+		}
+		return ((HashSet<string>) Blacklist).Remove(gid.ToString());
+	}
+
+	public void ClearBlacklist() {
+		if (Blacklist is not HashSet<string> blacklist) {
+			Blacklist = new HashSet<string>();
+		}
+		((HashSet<string>) Blacklist).Clear();
+	}
 	#endregion
 
 	#region proxy
@@ -58,6 +94,7 @@ public class ASFFreeGamesOptions {
 
 	[JsonPropertyName("redlibInstanceUrl")]
 #pragma warning disable CA1056
-	public string? RedlibInstanceUrl { get; set; } = "https://raw.githubusercontent.com/redlib-org/redlib-instances/main/instances.json";
+	public string? RedlibInstanceUrl { get; set; } =
+		"https://raw.githubusercontent.com/redlib-org/redlib-instances/main/instances.json";
 #pragma warning restore CA1056
 }
